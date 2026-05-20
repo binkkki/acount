@@ -2,13 +2,52 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT,
-});
+let poolInstance;
+
+function getDatabaseConfig() {
+    if (process.env.DATABASE_URL) {
+        return {
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false }
+        };
+    }
+
+    const requiredVars = ['DB_USER', 'DB_HOST', 'DB_NAME', 'DB_PASSWORD'];
+    const missingVars = requiredVars.filter(name => !process.env[name]);
+
+    if (missingVars.length > 0) {
+        throw new Error(
+            `Не заданы переменные окружения базы данных: ${missingVars.join(', ')}. ` +
+            'Укажите DATABASE_URL или полный набор DB_USER, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT.'
+        );
+    }
+
+    return {
+        user: process.env.DB_USER,
+        host: process.env.DB_HOST,
+        database: process.env.DB_NAME,
+        password: process.env.DB_PASSWORD,
+        port: Number(process.env.DB_PORT || 5432),
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+    };
+}
+
+function getPool() {
+    if (!poolInstance) {
+        poolInstance = new Pool(getDatabaseConfig());
+        poolInstance.on('error', error => {
+            console.error('❌ Неожиданная ошибка подключения PostgreSQL:', error.message);
+        });
+    }
+
+    return poolInstance;
+}
+
+const pool = {
+    query: (...args) => getPool().query(...args),
+    connect: (...args) => getPool().connect(...args),
+    end: (...args) => (poolInstance ? poolInstance.end(...args) : Promise.resolve())
+};
 
 // Функция для инициализации таблиц
 const initDatabase = async () => {
@@ -162,7 +201,8 @@ const initDatabase = async () => {
         `);
         console.log('✅ База данных инициализирована успешно');
     } catch (error) {
-        console.error('❌ Ошибка инициализации базы данных:', error);
+        console.error('❌ Ошибка инициализации базы данных:', error.message);
+        throw error;
     }
 };
 
