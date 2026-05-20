@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - PRANA IT</title>
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+    <div class="login-page">
+        <!-- Левая часть - контакты компании -->
+        <div class="company-contacts">
+            <div class="contacts-container">
+                <h2>Контакты</h2>
+                <div class="contact-item">
+                    <h3>Горячая линия</h3>
+                    <p class="contact-number">8 800 500-81-54</p>
+                </div>
+                <div class="contact-item">
+                    <h3>Клиентская поддержка</h3>
+                    <p class="contact-number">+7 962 018 99 90</p>
+                </div>
+                <div class="contact-item">
+                    <h3>Отдел продаж</h3>
+                    <p class="contact-number">+7 992 329 99 08</p>
+                </div>
+                <div class="contact-item">
+                    <h3>Email</h3>
+                    <p class="contact-email">info@pranait.ru</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая часть - форма регистрации со скроллом -->
+        <div class="login-container">
+            <div class="login-form">
+                <h2>Регистрация</h2>
+                <div class="form-scroll-container">
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label for="firstName">Имя:</label>
+                            <input type="text" id="firstName" name="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Фамилия:</label>
+                            <input type="text" id="lastName" name="lastName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email:</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Пароль:</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Подтвердите пароль:</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" required>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
+                            <label for="agreeTerms">Я принимаю условия <button type="button" class="terms-link" id="openAgreementBtn">пользовательского договора</button></label>
+                        </div>
+                        <button type="submit">Зарегистрироваться</button>
+                    </form>
+                </div>
+                <p>Уже есть аккаунт? <a href="/">Войти</a></p>
+                <div id="message" class="message"></div>
+            </div>
+        </div>
+    </div>
+    <div id="agreementModal" class="agreement-modal" aria-hidden="true">
+        <div class="agreement-modal-content">
+            <button type="button" class="agreement-close" id="closeAgreementBtn" aria-label="Закрыть">×</button>
+            <h2>Пользовательский договор Prana-IT</h2>
+            <section>
+                <h3>1. Общие положения</h3>
+                <p>Настоящий договор регулирует использование личного кабинета Prana-IT для подачи заявок, обмена сообщениями, файлами и отслеживания работ по цифровым проектам.</p>
+            </section>
+            <section>
+                <h3>2. Права и обязанности пользователя</h3>
+                <p>Пользователь обязуется указывать достоверные данные, не передавать доступ третьим лицам и использовать сервис только для законного взаимодействия с Prana-IT. Пользователь вправе получать информацию о проектах, направлять материалы и обращаться в поддержку.</p>
+            </section>
+            <section>
+                <h3>3. Обработка персональных данных</h3>
+                <p>Prana-IT обрабатывает имя, контакты, сведения о компании, сообщения, файлы и технические данные для регистрации, поддержки, выполнения заявок и коммуникации по проектам.</p>
+            </section>
+            <section>
+                <h3>4. Платежи</h3>
+                <p>Информация о платежах отображается в личном кабинете в справочных целях. Условия оплаты, сроки, возвраты и закрывающие документы определяются отдельными счетами, договорами или приложениями к ним.</p>
+            </section>
+            <section>
+                <h3>5. Удаление аккаунта</h3>
+                <p>Пользователь может запросить удаление аккаунта в настройках. При удалении удаляются связанные данные личного кабинета, включая проекты, сообщения, уведомления, файлы и историю платежей, если иное не требуется законом или бухгалтерским учетом.</p>
+            </section>
+            <section>
+                <h3>6. Ограничение ответственности</h3>
+                <p>Сервис предоставляется как рабочий инструмент для коммуникации. Prana-IT не отвечает за последствия передачи пользователем некорректных данных, утраты доступа по вине пользователя или действий третьих лиц вне контроля Prana-IT.</p>
+            </section>
+            <section>
+                <h3>7. Контактная информация</h3>
+                <p>По вопросам договора и личного кабинета: info@pranait.ru, 8 800 500-81-54, г. Ставрополь, ул. 50 лет ВЛКСМ 113.</p>
+            </section>
+        </div>
+    </div>
+    <script src="../js/auth.js"></script>
+</body>
+</html>

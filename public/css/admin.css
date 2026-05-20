@@ -1,0 +1,156 @@
+/* Admin specific styles */
+.admin-container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.admin-container h2 {
+    color: var(--prana-green, #1d9888);
+    margin-bottom: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 3px solid var(--prana-green-2, #34c4b1);
+    padding-bottom: 0.5rem;
+}
+
+.users-table {
+    background: var(--surface-card, white);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--line, #e2e8f0);
+    overflow: hidden;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 1.2rem;
+    text-align: left;
+    border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+th {
+    background: var(--prana-green, #1d9888);
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+tr:hover {
+    background: rgba(52, 196, 177, 0.08);
+}
+
+td {
+    color: var(--text-color, #2d3748);
+    font-weight: 500;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.admin-notifications-list {
+    max-height: 280px;
+}
+
+.admin-files {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin: 1rem 0;
+    padding: 0.85rem;
+    border: 1px solid var(--line, #dbe7e5);
+    border-radius: 12px;
+    background: var(--surface-soft, #f4f8f7);
+}
+
+.admin-files-title {
+    color: var(--prana-green, #1d9888);
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.admin-file-link {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--line, #dbe7e5);
+    border-radius: 10px;
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #17252f);
+    box-shadow: none;
+    text-align: left;
+}
+
+.admin-file-link span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-file-link small {
+    flex: 0 0 auto;
+    color: var(--muted, #687684);
+    font-size: 0.78rem;
+}
+
+.admin-file-link:hover {
+    border-color: var(--prana-green-2, #34c4b1);
+    background: rgba(52, 196, 177, 0.08);
+    transform: translateY(-1px);
+}
+
+.empty-admin-files {
+    color: var(--muted, #687684);
+    font-weight: 600;
+}
+
+.action-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-edit {
+    background: var(--prana-green, #1d9888);
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2c5282;
+}
+
+.btn-delete {
+    background: #e53e3e;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c53030;
+}
+
+/* Responsive table */
+@media (max-width: 1024px) {
+    .users-table {
+        overflow-x: auto;
+    }
+    
+    table {
+        min-width: 800px;
+    }
+}

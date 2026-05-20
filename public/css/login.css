@@ -1,0 +1,613 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: #34c4b1 rgba(226, 232, 240, 0.5);
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.45);
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+    border: 2px solid rgba(226, 232, 240, 0.45);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #34c4b1, #1d9888);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #43d7c4, #1d9888);
+}
+
+body {
+    background: linear-gradient(
+        135deg, 
+        #e6ebea 0%, 
+        #4fa598 25%, 
+        #3db0a4 50%, 
+        #cecece 75%, 
+        #58ada6 100%
+    );
+    background-size: 400% 400%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: gradientShift 15s ease infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Анимация плавного перехода градиента */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Эффект частиц для фона */
+body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.login-page {
+    display: flex;
+    width: 90%;
+    max-width: 1200px;
+    height: 80vh;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 
+        0 25px 50px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1;
+}
+
+/* Левая часть - форма входа */
+.login-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.login-form {
+    width: 100%;
+    max-width: 400px;
+    animation: fadeInUp 1s ease-out;
+}
+
+.login-form h2 {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    color: #1d9888;
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #1d9888, #34c4b1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-group {
+    margin-bottom: 2rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.8rem;
+    color: #1d9888;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 1.2rem;
+    border: 2px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #34c4b1;
+    background: white;
+    box-shadow: 
+        0 0 0 3px rgba(29, 132, 108, 0.2),
+        0 5px 15px rgba(29, 132, 108, 0.2);
+    transform: translateY(-2px);
+}
+
+button {
+    width: 100%;
+    padding: 1.2rem;
+    background: linear-gradient(135deg, #34c4b1, #1d9888);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(29, 132, 108, 0.2);
+}
+
+button:hover {
+    background: linear-gradient(135deg, #1d9888, #34c4b1);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(29, 132, 108, 0.2);
+}
+
+button:active {
+    transform: translateY(-1px);
+}
+
+p {
+    text-align: center;
+    color: #589895;
+    font-size: 0.95rem;
+}
+
+a {
+    color: #34c4b1;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #1d9888;
+    text-decoration: underline;
+}
+
+.message {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.message.success {
+    color: #2f855a;
+    border: 2px solid rgba(154, 230, 180, 0.5);
+    background: rgba(240, 255, 244, 0.9);
+}
+
+.message.error {
+    color: #c53030;
+    border: 2px solid rgba(254, 178, 178, 0.5);
+    background: rgba(255, 245, 245, 0.9);
+}
+
+.company-brand {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    padding: 3rem;
+    position: relative;
+}
+
+.logo-container {
+    text-align: center;
+    max-width: 500px;
+    position: relative;
+    z-index: 2;
+    animation: fadeInUp 1s ease-out 0.3s both;
+}
+
+.logo-image {
+    max-width: 500px;
+    max-height: 370px;
+    filter: 
+        drop-shadow(0 0 30px rgba(255, 255, 255, 0.4))
+        drop-shadow(0 0 50px rgba(255, 255, 255, 0.3));
+    transition: all 0.5s ease;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logo-image:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.2);
+    filter: 
+        drop-shadow(0 0 40px rgba(255, 255, 255, 0.5))
+        drop-shadow(0 0 60px rgba(255, 255, 255, 0.4));
+}
+
+.slogan {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #ffffff;
+    margin-top: 2.5rem;
+    text-shadow: 
+        2px 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.5px;
+}
+
+@keyframes textShine {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.company-contacts {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.contacts-container {
+    width: 100%;
+    max-width: 400px;
+    animation: fadeInUp 1s ease-out;
+}
+
+.contacts-container h2 {
+    text-align: center;
+    margin-bottom: 3rem;
+    color: #1d9888;
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.contact-item {
+    margin-bottom: 2.5rem;
+    text-align: center;
+}
+
+.contact-item h3 {
+    color: #34c4b1;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.contact-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1d9888;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 0;
+    transition: color 0.3s ease;
+}
+
+.contact-number:hover {
+    color: #34c4b1;
+}
+
+.contact-email {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #1d9888;
+    margin: 0;
+    word-break: break-all;
+}
+
+/* Адаптивность для регистрации */
+@media (max-width: 968px) {
+    .login-page {
+        flex-direction: column;
+    }
+    
+    .company-contacts {
+        order: 2;
+        padding: 2rem;
+    }
+    
+    .contacts-container h2 {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .contact-item {
+        margin-bottom: 2rem;
+    }
+    
+    .contact-number {
+        font-size: 1.5rem;
+    }
+    
+    .contact-email {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .company-contacts {
+        padding: 1.5rem;
+    }
+    
+    .contacts-container h2 {
+        font-size: 1.8rem;
+    }
+    
+    .contact-number {
+        font-size: 1.3rem;
+    }
+    
+    .contact-item h3 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Контейнер для скролла формы */
+.form-scroll-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 1rem 0;
+    padding-right: 0.5rem;
+}
+
+/* Стилизация скроллбара */
+.form-scroll-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.form-scroll-container::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.5);
+    border-radius: 4px;
+}
+
+.form-scroll-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #1d9888, #34c4b1);
+    border-radius: 4px;
+}
+
+.form-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #34c4b1, #1d9888);
+}
+
+/* Для Firefox */
+.form-scroll-container {
+    scrollbar-width: thin;
+    scrollbar-color: #1d9888 rgba(226, 232, 240, 0.5);
+}
+
+/* Увеличиваем высоту формы регистрации */
+.login-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.login-form {
+    width: 100%;
+    max-width: 450px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Дополнительные поля формы */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.checkbox-group label {
+    margin: 0;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.terms-link {
+    width: auto;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #1d9888;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    box-shadow: none;
+}
+
+.terms-link:hover {
+    background: transparent;
+    color: #34c4b1;
+    transform: none;
+    box-shadow: none;
+}
+
+.agreement-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(10, 29, 27, 0.62);
+}
+
+.agreement-modal.agreement-open {
+    display: flex;
+}
+
+.agreement-modal-content {
+    position: relative;
+    width: min(760px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 2rem;
+    border-radius: 16px;
+    background: #ffffff;
+    color: #17252f;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+}
+
+.agreement-modal-content h2 {
+    margin: 0 2.5rem 1.25rem 0;
+    color: #1d9888;
+}
+
+.agreement-modal-content h3 {
+    margin: 1rem 0 0.35rem;
+    color: #1d9888;
+    font-size: 1rem;
+}
+
+.agreement-modal-content p {
+    text-align: left;
+    color: #2d3748;
+    line-height: 1.55;
+}
+
+.agreement-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    background: #eef6f4;
+    color: #17252f;
+    box-shadow: none;
+}
+
+.agreement-close:hover {
+    background: #dff3ef;
+    color: #1d9888;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Адаптивность для скролла */
+@media (max-width: 968px) {
+    .form-scroll-container {
+        max-height: 300px;
+    }
+    
+    .login-container {
+        max-height: 60vh;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-scroll-container {
+        max-height: 250px;
+    }
+    
+    .login-form {
+        padding: 0 0.5rem;
+    }
+}
+
+/* Плавный скролл */
+.form-scroll-container {
+    scroll-behavior: smooth;
+}
+
+/* Индикатор скролла */
+.form-scroll-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.9));
+    pointer-events: none;
+}
+
+@font-face {
+    font-family: 'PP Neue Machina';
+    src: url('../fonts/PPNeueMachina-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'PP Neue Machina';
+    src: url('../fonts/PPNeueMachina-Light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'PP Neue Machina';
+    src: url('../fonts/PPNeueMachina-Ultrabold.otf') format('opentype');
+    font-weight: 800;
+    font-style: normal;
+}
+
+/* Применяем ко всему сайту */
+body {
+    font-family: 'PP Neue Machina', sans-serif;
+}
