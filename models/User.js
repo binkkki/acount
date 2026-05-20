@@ -5,13 +5,14 @@ class User {
     // Создание пользователя
     static async create(userData) {
         const { email, password, firstName, lastName, role = 'user', phone = null, company = null, acceptedTerms = false } = userData;
+        const normalizedEmail = email.trim().toLowerCase();
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const result = await pool.query(
             `INSERT INTO users (email, password, first_name, last_name, role, phone, company, accepted_terms, accepted_terms_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN CURRENT_TIMESTAMP ELSE NULL END)
              RETURNING id, email, first_name, last_name, role, phone, company, notify_email, notify_messages, notify_status, notify_notes`,
-            [email, hashedPassword, firstName, lastName, role, phone, company, acceptedTerms]
+            [normalizedEmail, hashedPassword, firstName, lastName, role, phone, company, acceptedTerms]
         );
         return result.rows[0];
     }
@@ -19,8 +20,8 @@ class User {
     // Поиск пользователя по email
     static async findByEmail(email) {
         const result = await pool.query(
-            'SELECT * FROM users WHERE email = $1',
-            [email]
+            'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
+            [email.trim()]
         );
         return result.rows[0];
     }

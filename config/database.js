@@ -1,5 +1,6 @@
 // config/database.js
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 let poolInstance;
@@ -194,11 +195,24 @@ const initDatabase = async () => {
             CREATE INDEX IF NOT EXISTS idx_file_comments_file_id ON file_comments(file_id);
             CREATE INDEX IF NOT EXISTS idx_project_approvals_project_id ON project_approvals(project_id);
 
-            -- Тестовый пользователь
-            INSERT INTO users (email, password, first_name, last_name, role)
-            SELECT 'admin@example.com', '$2a$10$rOzZbZz7kAq1V2W5Xz3J3.7qjKvL8M9N0O1P2Q3R4S5T6U7V8W9X0Y1Z2', 'Admin', 'User', 'admin'
-            WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@example.com');
         `);
+
+        if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+            const adminEmail = process.env.ADMIN_EMAIL.trim().toLowerCase();
+            const adminPasswordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+
+            await pool.query(
+                `INSERT INTO users (email, password, first_name, last_name, role, accepted_terms, accepted_terms_at)
+                 VALUES ($1, $2, 'Admin', 'User', 'admin', TRUE, CURRENT_TIMESTAMP)
+                 ON CONFLICT (email) DO UPDATE
+                 SET password = EXCLUDED.password,
+                     role = 'admin',
+                     accepted_terms = TRUE,
+                     accepted_terms_at = COALESCE(users.accepted_terms_at, CURRENT_TIMESTAMP)`,
+                [adminEmail, adminPasswordHash]
+            );
+        }
+
         console.log('✅ База данных инициализирована успешно');
     } catch (error) {
         console.error('❌ Ошибка инициализации базы данных:', error.message);

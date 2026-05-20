@@ -21,7 +21,8 @@ function toClientUser(user) {
 
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, firstName, lastName, phone, company, acceptedTerms } = req.body;
+        const { password, firstName, lastName, phone, company, acceptedTerms } = req.body;
+        const email = req.body.email?.trim().toLowerCase();
 
         if (!email || !password || !firstName || !lastName) {
             return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
@@ -48,7 +49,8 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { password } = req.body;
+        const email = req.body.email?.trim().toLowerCase();
 
         if (!email || !password) {
             return res.status(400).json({ error: 'Email и пароль обязательны' });
