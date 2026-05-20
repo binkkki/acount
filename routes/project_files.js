@@ -9,12 +9,22 @@ const path = require('path');
 const fs = require('fs');
 
 // Настройка multer для загрузки файлов
-const upload = multer({ dest: 'uploads/' });
+const uploadDir = process.env.VERCEL
+    ? path.join('/tmp', 'uploads')
+    : path.join(__dirname, '..', 'uploads');
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        fs.mkdir(uploadDir, { recursive: true }, err => cb(err, uploadDir));
+    }
+});
+
+const upload = multer({ storage });
 
 function removeUploadedFile(filePath) {
     if (!filePath) return;
     const absolutePath = path.resolve(filePath);
-    const uploadsRoot = path.resolve('uploads');
+    const uploadsRoot = path.resolve(uploadDir);
     if (!absolutePath.startsWith(uploadsRoot)) return;
     fs.unlink(absolutePath, err => {
         if (err && err.code !== 'ENOENT') console.error('Ошибка удаления файла с диска:', err);
@@ -64,7 +74,7 @@ router.post('/:projectId', auth, upload.single('file'), async (req, res) => {
 
     if (!file) return res.status(400).json({ error: 'Файл не выбран' });
 
-    const filePath = path.join('uploads', file.filename);
+    const filePath = file.path;
 
     try {
         const project = await Project.findByIdForRole(projectId, req.user);
