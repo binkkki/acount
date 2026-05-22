@@ -18,6 +18,8 @@ class Auth {
             registerForm.addEventListener('submit', (e) => this.handleRegister(e));
         }
 
+        this.initAuthPageTransitions();
+
         document.getElementById('openAgreementBtn')?.addEventListener('click', () => this.showAgreement());
         document.getElementById('closeAgreementBtn')?.addEventListener('click', () => this.hideAgreement());
         document.getElementById('agreementModal')?.addEventListener('click', event => {
@@ -28,6 +30,29 @@ class Auth {
         if (this.token) {
             this.verifyToken();
         }
+    }
+
+    initAuthPageTransitions() {
+        const page = document.querySelector('.auth-page');
+        const supportsViewTransitions = 'startViewTransition' in document;
+        if (!page || supportsViewTransitions) return;
+
+        document.querySelectorAll('.auth-switch a[href="/"], .auth-switch a[href="/register"]').forEach(link => {
+            link.addEventListener('click', event => {
+                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+                const href = link.getAttribute('href');
+                if (!href || href === window.location.pathname) return;
+
+                event.preventDefault();
+                page.classList.add('auth-exiting');
+                page.classList.toggle('auth-exiting-to-register', href === '/register');
+                page.classList.toggle('auth-exiting-to-login', href === '/');
+                window.setTimeout(() => {
+                    window.location.href = href;
+                }, 420);
+            });
+        });
     }
 
     async handleLogin(e) {
