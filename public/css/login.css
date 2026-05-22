@@ -139,12 +139,23 @@ body::before {
     animation: authSettle 0.46s ease-out both;
 }
 
+.auth-wordmark-link {
+    display: inline-block;
+    margin-bottom: 24px;
+    border-radius: 10px;
+    transition: transform 0.24s ease, box-shadow 0.24s ease, opacity 0.24s ease;
+}
+
+.auth-wordmark-link:hover {
+    transform: translateY(-2px);
+    opacity: 0.94;
+}
+
 .auth-wordmark {
     display: block;
     width: 184px;
     max-width: 58%;
     height: auto;
-    margin-bottom: 24px;
     padding: 10px 12px;
     border-radius: 10px;
     background: #102523;
@@ -244,6 +255,29 @@ body::before {
 
 .auth-submit:active {
     transform: translateY(0);
+}
+
+.auth-site-link {
+    display: inline-flex;
+    width: 100%;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    border: 1px solid rgba(23, 138, 127, 0.24);
+    border-radius: 8px;
+    color: var(--green);
+    background: rgba(53, 199, 179, 0.09);
+    font-weight: 800;
+    transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.auth-site-link:hover {
+    color: #ffffff;
+    border-color: var(--green);
+    background: var(--green);
+    box-shadow: 0 14px 30px rgba(23, 138, 127, 0.2);
+    transform: translateY(-2px);
 }
 
 .auth-switch {
@@ -463,7 +497,7 @@ a:hover {
 }
 
 .agreement-modal {
-    display: none;
+    display: flex;
     position: fixed;
     inset: 0;
     z-index: 20;
@@ -471,10 +505,16 @@ a:hover {
     justify-content: center;
     padding: 24px;
     background: rgba(16, 37, 35, 0.68);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.24s ease, visibility 0.24s ease;
 }
 
 .agreement-modal.agreement-open {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .agreement-modal-content {
@@ -487,6 +527,14 @@ a:hover {
     color: var(--ink);
     background: var(--paper);
     box-shadow: var(--shadow);
+    transform: translateY(14px) scale(0.98);
+    transition: transform 0.24s ease, opacity 0.24s ease;
+    opacity: 0;
+}
+
+.agreement-modal.agreement-open .agreement-modal-content {
+    transform: translateY(0) scale(1);
+    opacity: 1;
 }
 
 .agreement-modal-content h2 {
@@ -607,10 +655,13 @@ a:hover {
         padding: 28px 18px 34px;
     }
 
+    .auth-wordmark-link {
+        margin-bottom: 20px;
+    }
+
     .auth-wordmark {
         width: 160px;
         max-width: 68%;
-        margin-bottom: 20px;
         padding: 9px 11px;
     }
 

@@ -1119,11 +1119,17 @@ class Dashboard {
     }
 
     showModal(modalId) {
-        document.getElementById(modalId)?.classList.add('modal-open');
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.add('modal-open');
+        modal.setAttribute('aria-hidden', 'false');
     }
 
     hideModal(modalId) {
-        document.getElementById(modalId)?.classList.remove('modal-open');
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.remove('modal-open');
+        modal.setAttribute('aria-hidden', 'true');
     }
 
     logout() {
