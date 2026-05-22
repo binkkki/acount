@@ -18,6 +18,8 @@ class Dashboard {
         this.previousUnreadNotificationsCount = null;
         this.soundEnabled = false;
         this.audioContext = null;
+        this.language = localStorage.getItem('language') || 'ru';
+        this.translationMap = this.buildTranslationMap();
         this.init();
     }
 
@@ -32,6 +34,7 @@ class Dashboard {
         this.initModals();
         this.initBot();
         this.initNotificationSound();
+        this.initLanguageSelector();
 
         await this.loadUserData();
         await this.loadProjects();
@@ -39,6 +42,7 @@ class Dashboard {
         await this.loadNotifications();
         await this.loadFiles();
         if (this.currentProjectId) await this.loadChat();
+        this.applyLanguage();
         this.startLiveUpdates();
     }
 
@@ -90,6 +94,7 @@ class Dashboard {
         const filesNavItem = document.getElementById('filesNavItem');
         if (filesNavItem) filesNavItem.style.display = user.role === 'admin' ? 'none' : 'block';
         document.body.classList.toggle('is-admin', user.role === 'admin');
+        this.applyLanguage();
     }
 
     async updateProfile(event) {
@@ -132,6 +137,7 @@ class Dashboard {
         this.displayProjects();
         this.renderProjectFocus();
         this.updateWidgets();
+        this.applyLanguage();
     }
 
     displayProjects() {
@@ -293,6 +299,7 @@ class Dashboard {
             const data = await this.request('/api/users/payments');
             this.payments = data.payments || [];
             this.renderPayments();
+            this.applyLanguage();
         } catch (err) {
             const container = document.getElementById('paymentsHistory');
             if (container) container.innerHTML = '<div class="empty-state">Не удалось загрузить историю платежей</div>';
@@ -388,6 +395,7 @@ class Dashboard {
         container.querySelectorAll('[data-approval-action]').forEach(button => {
             button.addEventListener('click', () => this.updateApproval(button.dataset.stageKey, button.dataset.approvalAction));
         });
+        this.applyLanguage();
     }
 
     renderApprovalStage(stage) {
@@ -440,6 +448,7 @@ class Dashboard {
                     <p>Когда появятся счета или оплаты по проектам, они отобразятся здесь.</p>
                 </div>
             `;
+            this.applyLanguage();
             return;
         }
 
@@ -469,6 +478,7 @@ class Dashboard {
                 </table>
             </div>
         `;
+        this.applyLanguage();
     }
 
     renderProjectFocus() {
@@ -508,6 +518,7 @@ class Dashboard {
         container.querySelectorAll('[data-focus-action]').forEach(button => {
             button.addEventListener('click', () => this.switchSection(button.dataset.focusAction));
         });
+        this.applyLanguage();
     }
 
     async changePassword(event) {
@@ -600,8 +611,10 @@ class Dashboard {
             const data = await this.request(`/api/messages/${this.currentProjectId}`);
             chatContainer.innerHTML = (data.messages || []).map(message => this.renderMessage(message)).join('');
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            this.applyLanguage();
         } catch (err) {
             chatContainer.innerHTML = '<p class="empty-state">Ошибка загрузки сообщений</p>';
+            this.applyLanguage();
         }
     }
 
@@ -651,6 +664,7 @@ class Dashboard {
         const projectId = Number(fileProjectSelect?.value || this.currentProjectId);
         if (!projectId) {
             filesList.innerHTML = '<div class="empty-state">Выберите проект для просмотра файлов</div>';
+            this.applyLanguage();
             return;
         }
 
@@ -688,8 +702,10 @@ class Dashboard {
             filesList.querySelectorAll('[data-file-comment]').forEach(form => {
                 form.addEventListener('submit', event => this.addFileComment(event));
             });
+            this.applyLanguage();
         } catch (err) {
             filesList.innerHTML = '<div class="empty-state">Ошибка загрузки файлов</div>';
+            this.applyLanguage();
         }
     }
 
@@ -767,6 +783,7 @@ class Dashboard {
             this.notifications = data.notifications || [];
             this.renderNotifications();
             this.updateWidgets(data.unreadCount);
+            this.applyLanguage();
         } catch (err) {
             console.error('Ошибка загрузки уведомлений:', err);
         }
@@ -926,9 +943,31 @@ class Dashboard {
 
         toggle?.addEventListener('change', () => {
             const theme = toggle.checked ? 'dark' : 'light';
+            this.runThemeTransition();
             document.body.classList.toggle('dark-theme', theme === 'dark');
             document.body.classList.toggle('light-theme', theme === 'light');
             localStorage.setItem('theme', theme);
+        });
+    }
+
+    runThemeTransition() {
+        document.body.classList.add('theme-transitioning');
+        window.clearTimeout(this.themeTransitionTimer);
+        this.themeTransitionTimer = window.setTimeout(() => {
+            document.body.classList.remove('theme-transitioning');
+        }, 340);
+    }
+
+    initLanguageSelector() {
+        document.documentElement.lang = this.language;
+        const select = document.getElementById('languageSelect');
+        if (select) select.value = this.language;
+
+        select?.addEventListener('change', () => {
+            this.language = select.value === 'en' ? 'en' : 'ru';
+            localStorage.setItem('language', this.language);
+            document.documentElement.lang = this.language;
+            this.applyLanguage();
         });
     }
 
@@ -1179,6 +1218,176 @@ class Dashboard {
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#039;');
+    }
+
+    buildTranslationMap() {
+        const ruToEn = {
+            'PRANA IT / Личный кабинет': 'PRANA IT / Account',
+            'Меню': 'Menu',
+            'Поиск': 'Search',
+            'Проекты, файлы, сообщения': 'Projects, files, messages',
+            'Профиль': 'Profile',
+            'Настройки': 'Settings',
+            'Проекты': 'Projects',
+            'Платежи': 'Payments',
+            'Сообщения': 'Messages',
+            'Файлы проекта': 'Project files',
+            'Админ панель': 'Admin panel',
+            'На главный экран': 'Main website',
+            'Мой профиль': 'My profile',
+            'Имя:': 'First name:',
+            'Фамилия:': 'Last name:',
+            'Email:': 'Email:',
+            'Телефон:': 'Phone:',
+            'Компания:': 'Company:',
+            'Роль:': 'Role:',
+            'Дата регистрации:': 'Registration date:',
+            'Уведомления': 'Notifications',
+            'Прочитано': 'Mark read',
+            'Активные проекты': 'Active projects',
+            'в работе и новых': 'new and in progress',
+            'непрочитанных': 'unread',
+            'Новые сообщения': 'New messages',
+            'в проектах': 'in projects',
+            'Настройки профиля': 'Profile settings',
+            'Имя': 'First name',
+            'Фамилия': 'Last name',
+            'Телефон': 'Phone',
+            'Компания': 'Company',
+            'Настройки уведомлений': 'Notification settings',
+            'Email-уведомления': 'Email notifications',
+            'Новые сообщения от оператора': 'New messages from operator',
+            'Изменения статуса проектов': 'Project status changes',
+            'Заметки администратора': 'Admin notes',
+            'Язык интерфейса': 'Interface language',
+            'Язык': 'Language',
+            'Русский': 'Russian',
+            'Сохранить изменения': 'Save changes',
+            'Смена пароля': 'Change password',
+            'Текущий пароль': 'Current password',
+            'Новый пароль': 'New password',
+            'Подтверждение нового пароля': 'Confirm new password',
+            'Изменить пароль': 'Change password',
+            'Удаление аккаунта': 'Delete account',
+            'Удаление необратимо: вместе с аккаунтом будут удалены проекты, сообщения, уведомления, файлы и платежная история.': 'Deletion is permanent: projects, messages, notifications, files, and payment history will be removed with the account.',
+            'Удалить аккаунт': 'Delete account',
+            '+ Новый проект': '+ New project',
+            'Статус': 'Status',
+            'Все статусы': 'All statuses',
+            'Новый': 'New',
+            'В работе': 'In progress',
+            'Завершен': 'Completed',
+            'Отклонен': 'Rejected',
+            'Показать архив': 'Show archive',
+            'Создать новый проект': 'Create new project',
+            'Название проекта': 'Project title',
+            'Описание': 'Description',
+            'Тип проекта': 'Project type',
+            'Сайт, CRM, дизайн': 'Website, CRM, design',
+            'Цель': 'Goal',
+            'Что должен решить проект': 'What should the project solve',
+            'Бюджет, ₽': 'Budget, RUB',
+            'Например: 12 500': 'For example: 12 500',
+            'Срок': 'Deadline',
+            'Отмена': 'Cancel',
+            'Создать проект': 'Create project',
+            'История платежей': 'Payment history',
+            'Платежей пока нет': 'No payments yet',
+            'Когда появятся счета или оплаты по проектам, они отобразятся здесь.': 'Invoices and project payments will appear here.',
+            'Дата': 'Date',
+            'Сумма': 'Amount',
+            'Способ оплаты': 'Payment method',
+            'Номер транзакции': 'Transaction number',
+            'Проект': 'Project',
+            'К списку': 'Back to list',
+            'Введите сообщение...': 'Type a message...',
+            'Отправить': 'Send',
+            'Сначала выберите проект': 'Choose a project first',
+            'Загрузить': 'Upload',
+            'Удалить аккаунт?': 'Delete account?',
+            'Это действие необратимо. Вместе с аккаунтом будут удалены связанные данные: проекты, сообщения, уведомления, файлы и история платежей.': 'This action is permanent. Related data will be deleted with the account: projects, messages, notifications, files, and payment history.',
+            'Введите слово УДАЛИТЬ': 'Type УДАЛИТЬ',
+            'Помощник PRANA IT': 'PRANA IT assistant',
+            'Напишите сообщение...': 'Write a message...',
+            'Выйти': 'Log out',
+            'Пользователь': 'User',
+            'Администратор': 'Administrator',
+            'Бюджет не указан': 'Budget not specified',
+            'Срок не указан': 'Deadline not specified',
+            'Файлов пока нет': 'No files yet',
+            'Новых уведомлений нет': 'No new notifications',
+            'Проектов пока нет': 'No projects yet',
+            'Создайте первый проект, чтобы начать работу.': 'Create your first project to start working.',
+            'Текущий проект': 'Current project',
+            'Создайте проект, чтобы отслеживать следующий шаг, статус и коммуникации.': 'Create a project to track the next step, status, and communication.',
+            'Ничего не найдено': 'Nothing found',
+            'Попробуйте изменить поисковый запрос или статус.': 'Try changing the search query or status.',
+            'Описание не указано': 'No description',
+            'Открыть чат': 'Open chat',
+            'Чат': 'Chat',
+            'Файлы': 'Files',
+            'Бриф': 'Brief',
+            'Тип': 'Type',
+            'Не указан': 'Not specified',
+            'Не указана': 'Not specified',
+            'Согласование этапов': 'Stage approvals',
+            'Документы и файлы': 'Documents and files',
+            'Счета и платежи': 'Invoices and payments',
+            'История действий': 'Activity history',
+            'История пока пустая': 'History is empty',
+            'Ожидает': 'Pending',
+            'Согласовано': 'Approved',
+            'Нужны правки': 'Changes needed',
+            'Согласовать': 'Approve',
+            'Правки': 'Changes',
+            'Дата неизвестна': 'Unknown date',
+            'Ошибка загрузки сообщений': 'Failed to load messages',
+            'Ошибка загрузки файлов': 'Failed to load files',
+            'Выберите проект для просмотра файлов': 'Choose a project to view files',
+            'Комментарий к файлу': 'File comment',
+            'Удалить файл': 'Delete file',
+            'Ожидает оплаты': 'Pending payment',
+            'Оплачен': 'Paid',
+            'Ошибка': 'Error',
+            'Возврат': 'Refund',
+            'Неизвестно': 'Unknown'
+        };
+
+        const enToRu = Object.fromEntries(Object.entries(ruToEn).map(([ru, en]) => [en, ru]));
+        return { ruToEn, enToRu };
+    }
+
+    applyLanguage() {
+        const dictionary = this.language === 'en' ? this.translationMap.ruToEn : this.translationMap.enToRu;
+        document.documentElement.lang = this.language;
+
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+            acceptNode: node => {
+                const parent = node.parentElement;
+                if (!parent || ['SCRIPT', 'STYLE', 'TEXTAREA'].includes(parent.tagName)) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                return node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+            }
+        });
+
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(node => {
+            const original = node.nodeValue;
+            const trimmed = original.trim();
+            const translated = dictionary[trimmed];
+            if (!translated) return;
+            node.nodeValue = original.replace(trimmed, translated);
+        });
+
+        document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(element => {
+            const translated = dictionary[element.placeholder];
+            if (translated) element.placeholder = translated;
+        });
+
+        const select = document.getElementById('languageSelect');
+        if (select) select.value = this.language;
     }
 
     setText(id, value) {

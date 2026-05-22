@@ -353,10 +353,19 @@ class AdminPanel {
 
         toggle?.addEventListener('change', () => {
             const theme = toggle.checked ? 'dark' : 'light';
+            this.runThemeTransition();
             document.body.classList.toggle('dark-theme', theme === 'dark');
             document.body.classList.toggle('light-theme', theme === 'light');
             localStorage.setItem('theme', theme);
         });
+    }
+
+    runThemeTransition() {
+        document.body.classList.add('theme-transitioning');
+        window.clearTimeout(this.themeTransitionTimer);
+        this.themeTransitionTimer = window.setTimeout(() => {
+            document.body.classList.remove('theme-transitioning');
+        }, 340);
     }
 
     startLiveUpdates() {

@@ -983,6 +983,17 @@ input:checked + .slider:before {
     --line: #dbe7e5;
     --warning: #c97b18;
     --danger: #c94d4d;
+    --theme-speed: 0.32s;
+    --theme-easing: ease;
+}
+
+body.theme-transitioning,
+body.theme-transitioning *,
+body.theme-transitioning *::before,
+body.theme-transitioning *::after {
+    transition-property: background, background-color, border-color, box-shadow, color, fill, stroke !important;
+    transition-duration: var(--theme-speed) !important;
+    transition-timing-function: var(--theme-easing) !important;
 }
 
 body.light-theme {
