@@ -6,6 +6,10 @@ class AdminPanel {
         this.notifications = [];
         this.projectSearchQuery = '';
         this.projectStatusFilter = 'all';
+        this.previousUnreadNotificationsCount = null;
+        this.soundEnabled = false;
+        this.audioContext = null;
+        this.liveUpdateInterval = null;
         this.init();
     }
 
@@ -23,10 +27,12 @@ class AdminPanel {
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') this.closeUserModal();
         });
+        this.initNotificationSound();
         this.initThemeToggle();
         this.initFilters();
         await this.loadProfile();
         await Promise.all([this.loadUsers(), this.loadProjects(), this.loadNotifications()]);
+        this.startLiveUpdates();
     }
 
     async request(url, options = {}) {
@@ -97,6 +103,7 @@ class AdminPanel {
     async loadNotifications() {
         try {
             const data = await this.request('/api/notifications');
+            this.handleUnreadNotificationsChange(data.unreadCount || 0);
             this.notifications = data.notifications || [];
             this.renderNotifications();
         } catch (err) {
@@ -350,6 +357,62 @@ class AdminPanel {
             document.body.classList.toggle('light-theme', theme === 'light');
             localStorage.setItem('theme', theme);
         });
+    }
+
+    startLiveUpdates() {
+        if (this.liveUpdateInterval) clearInterval(this.liveUpdateInterval);
+        this.liveUpdateInterval = setInterval(async () => {
+            await this.loadNotifications();
+            await this.loadProjects();
+        }, 5000);
+    }
+
+    initNotificationSound() {
+        const enableSound = () => {
+            this.soundEnabled = true;
+            if (!this.audioContext) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) this.audioContext = new AudioContextClass();
+            }
+            if (this.audioContext?.state === 'suspended') this.audioContext.resume();
+        };
+
+        window.addEventListener('pointerdown', enableSound, { once: true });
+        window.addEventListener('keydown', enableSound, { once: true });
+    }
+
+    handleUnreadNotificationsChange(unreadCount) {
+        if (this.previousUnreadNotificationsCount !== null && unreadCount > this.previousUnreadNotificationsCount) {
+            this.playNotificationSound();
+        }
+        this.previousUnreadNotificationsCount = unreadCount;
+    }
+
+    playNotificationSound() {
+        if (!this.soundEnabled) return;
+
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!this.audioContext && AudioContextClass) this.audioContext = new AudioContextClass();
+            const context = this.audioContext;
+            if (!context) return;
+            if (context.state === 'suspended') context.resume();
+
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(740, context.currentTime);
+            oscillator.frequency.setValueAtTime(920, context.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.001, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.14, context.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.24);
+        } catch (error) {
+            console.warn('Notification sound is unavailable:', error);
+        }
     }
 
     getFilteredProjects() {

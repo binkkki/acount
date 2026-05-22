@@ -47,6 +47,23 @@ router.post('/:projectId', auth, async (req, res) => {
                 title: `Новое сообщение по проекту "${project.title}"`,
                 body: message_text.trim()
             });
+        } else if (project.assigned_admin_id) {
+            await Notification.create({
+                user_id: project.assigned_admin_id,
+                project_id: project.id,
+                actor_id: req.user.id,
+                type: 'message',
+                title: `Новое сообщение от клиента по проекту "${project.title}"`,
+                body: message_text.trim()
+            });
+        } else {
+            await Notification.createForAdmins({
+                project_id: project.id,
+                actor_id: req.user.id,
+                type: 'message',
+                title: `Новое сообщение от клиента по проекту "${project.title}"`,
+                body: message_text.trim()
+            });
         }
 
         res.status(201).json({ message: result.rows[0] });

@@ -15,6 +15,9 @@ class Dashboard {
         this.projectDetails = null;
         this.currentNotificationId = null;
         this.liveUpdateInterval = null;
+        this.previousUnreadNotificationsCount = null;
+        this.soundEnabled = false;
+        this.audioContext = null;
         this.init();
     }
 
@@ -28,6 +31,7 @@ class Dashboard {
         this.initEvents();
         this.initModals();
         this.initBot();
+        this.initNotificationSound();
 
         await this.loadUserData();
         await this.loadProjects();
@@ -759,6 +763,7 @@ class Dashboard {
     async loadNotifications() {
         try {
             const data = await this.request('/api/notifications');
+            this.handleUnreadNotificationsChange(data.unreadCount || 0);
             this.notifications = data.notifications || [];
             this.renderNotifications();
             this.updateWidgets(data.unreadCount);
@@ -925,6 +930,54 @@ class Dashboard {
             document.body.classList.toggle('light-theme', theme === 'light');
             localStorage.setItem('theme', theme);
         });
+    }
+
+    initNotificationSound() {
+        const enableSound = () => {
+            this.soundEnabled = true;
+            if (!this.audioContext) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) this.audioContext = new AudioContextClass();
+            }
+            if (this.audioContext?.state === 'suspended') this.audioContext.resume();
+        };
+
+        window.addEventListener('pointerdown', enableSound, { once: true });
+        window.addEventListener('keydown', enableSound, { once: true });
+    }
+
+    handleUnreadNotificationsChange(unreadCount) {
+        if (this.previousUnreadNotificationsCount !== null && unreadCount > this.previousUnreadNotificationsCount) {
+            this.playNotificationSound();
+        }
+        this.previousUnreadNotificationsCount = unreadCount;
+    }
+
+    playNotificationSound() {
+        if (!this.soundEnabled) return;
+
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!this.audioContext && AudioContextClass) this.audioContext = new AudioContextClass();
+            const context = this.audioContext;
+            if (!context) return;
+            if (context.state === 'suspended') context.resume();
+
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(740, context.currentTime);
+            oscillator.frequency.setValueAtTime(920, context.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.001, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.14, context.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.24);
+        } catch (error) {
+            console.warn('Notification sound is unavailable:', error);
+        }
     }
 
     initBot() {
