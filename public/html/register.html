@@ -7,68 +7,77 @@
     <link rel="stylesheet" href="../css/login.css">
 </head>
 <body>
-    <div class="login-page">
-        <!-- Левая часть - контакты компании -->
-        <div class="company-contacts">
-            <div class="contacts-container">
-                <h2>Контакты</h2>
-                <div class="contact-item">
-                    <h3>Горячая линия</h3>
-                    <p class="contact-number">8 800 500-81-54</p>
-                </div>
-                <div class="contact-item">
-                    <h3>Клиентская поддержка</h3>
-                    <p class="contact-number">+7 962 018 99 90</p>
-                </div>
-                <div class="contact-item">
-                    <h3>Отдел продаж</h3>
-                    <p class="contact-number">+7 992 329 99 08</p>
-                </div>
-                <div class="contact-item">
-                    <h3>Email</h3>
-                    <p class="contact-email">info@pranait.ru</p>
+    <main class="auth-page auth-page-register">
+        <section class="auth-showcase register-showcase">
+            <div class="showcase-media">
+                <img src="/images/service-img.jpg" alt="Команда PRANA IT">
+            </div>
+            <div class="showcase-graphics" aria-hidden="true">
+                <span class="graphic-line graphic-line-one"></span>
+                <span class="graphic-line graphic-line-two"></span>
+                <span class="graphic-node graphic-node-one"></span>
+                <span class="graphic-node graphic-node-two"></span>
+            </div>
+            <div class="showcase-content">
+                <h2>Начните проект с понятного кабинета</h2>
+                <p>Создавайте заявки, получайте ответы команды и храните материалы в одном месте.</p>
+                <div class="contact-strip">
+                    <a href="tel:88005008154">8 800 500-81-54</a>
+                    <a href="mailto:info@pranait.ru">info@pranait.ru</a>
                 </div>
             </div>
-        </div>
+            <div class="showcase-dashboard" aria-hidden="true">
+                <div class="dashboard-topline"></div>
+                <div class="dashboard-row dashboard-row-wide"></div>
+                <div class="dashboard-row"></div>
+                <div class="dashboard-meter">
+                    <span></span>
+                </div>
+            </div>
+        </section>
 
-        <!-- Правая часть - форма регистрации со скроллом -->
-        <div class="login-container">
-            <div class="login-form">
-                <h2>Регистрация</h2>
+        <section class="auth-panel">
+            <div class="auth-brand-mobile">
+                <img src="/images/logo.png" alt="PRANA IT">
+            </div>
+            <div class="login-form auth-form">
+                <p class="auth-kicker">Новый аккаунт</p>
+                <h1>Регистрация</h1>
+                <p class="auth-subtitle">Заполните данные, чтобы создать кабинет клиента PRANA IT.</p>
                 <div class="form-scroll-container">
                     <form id="registerForm">
                         <div class="form-group">
-                            <label for="firstName">Имя:</label>
-                            <input type="text" id="firstName" name="firstName" required>
+                            <label for="firstName">Имя</label>
+                            <input type="text" id="firstName" name="firstName" placeholder="Иван" autocomplete="given-name" required>
                         </div>
                         <div class="form-group">
-                            <label for="lastName">Фамилия:</label>
-                            <input type="text" id="lastName" name="lastName" required>
+                            <label for="lastName">Фамилия</label>
+                            <input type="text" id="lastName" name="lastName" placeholder="Петров" autocomplete="family-name" required>
                         </div>
                         <div class="form-group">
-                            <label for="email">Email:</label>
-                            <input type="email" id="email" name="email" required>
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" placeholder="name@example.com" autocomplete="email" required>
                         </div>
                         <div class="form-group">
-                            <label for="password">Пароль:</label>
-                            <input type="password" id="password" name="password" required>
+                            <label for="password">Пароль</label>
+                            <input type="password" id="password" name="password" placeholder="Минимум 6 символов" autocomplete="new-password" required>
                         </div>
                         <div class="form-group">
-                            <label for="confirmPassword">Подтвердите пароль:</label>
-                            <input type="password" id="confirmPassword" name="confirmPassword" required>
+                            <label for="confirmPassword">Подтвердите пароль</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Повторите пароль" autocomplete="new-password" required>
                         </div>
                         <div class="form-group checkbox-group">
                             <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
                             <label for="agreeTerms">Я принимаю условия <button type="button" class="terms-link" id="openAgreementBtn">пользовательского договора</button></label>
                         </div>
-                        <button type="submit">Зарегистрироваться</button>
+                        <button type="submit" class="auth-submit">Зарегистрироваться</button>
                     </form>
                 </div>
-                <p>Уже есть аккаунт? <a href="/">Войти</a></p>
+                <p class="auth-switch">Уже есть аккаунт? <a href="/">Войти</a></p>
                 <div id="message" class="message"></div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
     <div id="agreementModal" class="agreement-modal" aria-hidden="true">
         <div class="agreement-modal-content">
             <button type="button" class="agreement-close" id="closeAgreementBtn" aria-label="Закрыть">×</button>

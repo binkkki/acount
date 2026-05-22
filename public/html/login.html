@@ -7,36 +7,60 @@
     <link rel="stylesheet" href="../css/login.css">
 </head>
 <body>
-    <div class="login-page">
-        <!-- Левая часть - форма входа -->
-        <div class="login-container">
-            <div class="login-form">
-                <h2>Вход в систему</h2>
+    <main class="auth-page auth-page-login">
+        <section class="auth-panel">
+            <div class="auth-brand-mobile">
+                <img src="/images/logo.png" alt="PRANA IT">
+            </div>
+            <div class="login-form auth-form">
+                <p class="auth-kicker">Личный кабинет</p>
+                <h1>Вход в PRANA IT</h1>
+                <p class="auth-subtitle">Проекты, сообщения, файлы и статусы работ в одном рабочем пространстве.</p>
                 <form id="loginForm">
                     <div class="form-group">
-                        <label for="email">Email:</label>
-                        <input type="email" id="email" name="email" required>
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="name@example.com" autocomplete="email" required>
                     </div>
                     <div class="form-group">
-                        <label for="password">Пароль:</label>
-                        <input type="password" id="password" name="password" required>
+                        <label for="password">Пароль</label>
+                        <input type="password" id="password" name="password" placeholder="Введите пароль" autocomplete="current-password" required>
                     </div>
-                    <button type="submit">Войти</button>
+                    <button type="submit" class="auth-submit">Войти</button>
                 </form>
-                <p>Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+                <p class="auth-switch">Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
                 <div id="message" class="message"></div>
             </div>
-        </div>
+        </section>
 
-        <div class="company-brand">
-            <div class="logo-container">
-                <img src="/images/logo.png" alt="PRANA IT" class="logo-image">
-                <div class="slogan">
-                    Разработка сайтов, айдентики и медиаконтента
+        <section class="auth-showcase">
+            <div class="showcase-media">
+                <img src="/images/service-img.jpg" alt="Рабочий процесс PRANA IT">
+            </div>
+            <div class="showcase-graphics" aria-hidden="true">
+                <span class="graphic-line graphic-line-one"></span>
+                <span class="graphic-line graphic-line-two"></span>
+                <span class="graphic-node graphic-node-one"></span>
+                <span class="graphic-node graphic-node-two"></span>
+            </div>
+            <div class="showcase-content">
+                <h2>Цифровые проекты без потерянных сообщений</h2>
+                <p>Следите за этапами, файлами и коммуникацией с командой в спокойном личном кабинете.</p>
+                <div class="showcase-points">
+                    <span>Статусы</span>
+                    <span>Файлы</span>
+                    <span>Диалог</span>
                 </div>
             </div>
-        </div>
-    </div>
+            <div class="showcase-dashboard" aria-hidden="true">
+                <div class="dashboard-topline"></div>
+                <div class="dashboard-row dashboard-row-wide"></div>
+                <div class="dashboard-row"></div>
+                <div class="dashboard-meter">
+                    <span></span>
+                </div>
+            </div>
+        </section>
+    </main>
     <script src="../js/auth.js"></script>
 </body>
 </html>
