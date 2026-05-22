@@ -9,6 +9,7 @@ const projectRoutes = require('./routes/projects');
 const messagesRoutes = require('./routes/messages');
 const projectFilesRoutes = require('./routes/project_files');
 const notificationsRoutes = require('./routes/notifications');
+const botRoutes = require('./routes/bot');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/project_files', projectFilesRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/bot', botRoutes);
 
 // Serve HTML pages
 app.get('/', (req, res) => {

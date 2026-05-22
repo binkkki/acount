@@ -946,13 +946,26 @@ class Dashboard {
                 if (!botWindow.classList.contains('bot-open')) botWindow.style.display = 'none';
             }, 180);
         });
-        botForm.addEventListener('submit', event => {
+        botForm.addEventListener('submit', async event => {
             event.preventDefault();
             const text = botInput.value.trim();
             if (!text) return;
             this.addBotMessage('user', text);
             botInput.value = '';
-            setTimeout(() => this.addBotMessage('bot', this.getBotReply(text)), 350);
+            botInput.disabled = true;
+            try {
+                const data = await this.request('/api/bot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                this.addBotMessage('bot', data.reply || this.getBotReply(text));
+            } catch (err) {
+                this.addBotMessage('bot', this.getBotReply(text));
+            } finally {
+                botInput.disabled = false;
+                botInput.focus();
+            }
         });
     }
 

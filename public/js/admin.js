@@ -17,6 +17,12 @@ class AdminPanel {
 
         document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
         document.getElementById('markAdminNotificationsReadBtn')?.addEventListener('click', () => this.markAllNotificationsRead());
+        document.querySelectorAll('[data-close-user-modal]').forEach(element => {
+            element.addEventListener('click', () => this.closeUserModal());
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') this.closeUserModal();
+        });
         this.initThemeToggle();
         this.initFilters();
         await this.loadProfile();
@@ -55,7 +61,7 @@ class AdminPanel {
             this.users = data.users || [];
             const body = document.getElementById('usersTableBody');
             body.innerHTML = this.users.map(user => `
-                <tr>
+                <tr class="admin-user-row" data-user-id="${user.id}" tabindex="0">
                     <td>${user.id}</td>
                     <td>${this.escapeHtml(`${user.first_name || ''} ${user.last_name || ''}`.trim())}</td>
                     <td>${this.escapeHtml(user.email)}</td>
@@ -64,6 +70,15 @@ class AdminPanel {
                     <td>${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
                 </tr>
             `).join('');
+            body.querySelectorAll('[data-user-id]').forEach(row => {
+                row.addEventListener('click', () => this.openUserModal(row.dataset.userId));
+                row.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        this.openUserModal(row.dataset.userId);
+                    }
+                });
+            });
         } catch (err) {
             this.showMessage(err.message, 'error');
         }
@@ -207,6 +222,108 @@ class AdminPanel {
         };
         const label = labels[type] || 'Уведомление';
         return `<span class="admin-notification-badge type-${this.escapeHtml(type || 'info')}">${this.escapeHtml(label)}</span>`;
+    }
+
+    openUserModal(userId) {
+        const user = this.users.find(item => Number(item.id) === Number(userId));
+        if (!user) return;
+
+        const modal = document.getElementById('adminUserModal');
+        const content = document.getElementById('adminUserModalContent');
+        if (!modal || !content) return;
+
+        const userProjects = this.projects.filter(project => Number(project.user_id) === Number(user.id));
+        const activeProjects = userProjects.filter(project => project.status !== 'completed' && project.status !== 'rejected').length;
+        const filesCount = userProjects.reduce((sum, project) => sum + (Number(project.files_count) || (Array.isArray(project.files) ? project.files.length : 0)), 0);
+        const messagesCount = userProjects.reduce((sum, project) => sum + (Number(project.messages_count) || 0), 0);
+        const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Без имени';
+
+        content.innerHTML = `
+            <div class="admin-user-modal-header">
+                <span class="admin-user-avatar">${this.escapeHtml(this.getInitials(user))}</span>
+                <div>
+                    <h3 id="adminUserModalTitle">${this.escapeHtml(fullName)}</h3>
+                    <p>${this.escapeHtml(user.email)}</p>
+                </div>
+            </div>
+            <div class="admin-user-details-grid">
+                ${this.renderUserDetail('Роль', user.role === 'admin' ? 'Администратор' : 'Пользователь')}
+                ${this.renderUserDetail('Телефон', user.phone || 'Не указан')}
+                ${this.renderUserDetail('Компания', user.company || 'Не указана')}
+                ${this.renderUserDetail('Дата регистрации', user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : 'Не указана')}
+            </div>
+            <div class="admin-user-stats">
+                ${this.renderUserStat('Проектов', userProjects.length)}
+                ${this.renderUserStat('Активных', activeProjects)}
+                ${this.renderUserStat('Файлов', filesCount)}
+                ${this.renderUserStat('Сообщений', messagesCount)}
+            </div>
+            <div class="admin-user-projects">
+                <h4>Проекты пользователя</h4>
+                ${this.renderUserProjects(userProjects)}
+            </div>
+        `;
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        content.querySelectorAll('[data-modal-project-id]').forEach(card => {
+            card.addEventListener('click', () => {
+                this.closeUserModal();
+                this.highlightProject(card.dataset.modalProjectId);
+            });
+        });
+    }
+
+    closeUserModal() {
+        const modal = document.getElementById('adminUserModal');
+        if (!modal) return;
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+    }
+
+    renderUserDetail(label, value) {
+        return `
+            <div class="admin-user-detail">
+                <span>${this.escapeHtml(label)}</span>
+                <strong>${this.escapeHtml(value)}</strong>
+            </div>
+        `;
+    }
+
+    renderUserStat(label, value) {
+        return `
+            <div class="admin-user-stat">
+                <strong>${Number(value) || 0}</strong>
+                <span>${this.escapeHtml(label)}</span>
+            </div>
+        `;
+    }
+
+    renderUserProjects(projects) {
+        if (!projects.length) {
+            return '<div class="empty-state">У пользователя пока нет проектов</div>';
+        }
+
+        return projects.map(project => `
+            <article class="admin-user-project" data-modal-project-id="${project.id}">
+                <div>
+                    <strong>${this.escapeHtml(project.title)}</strong>
+                    <span>${this.escapeHtml(project.description || 'Описание не указано')}</span>
+                </div>
+                <div class="admin-user-project-meta">
+                    <span class="project-status status-${this.escapeHtml(project.status)}">${this.getStatusText(project.status)}</span>
+                    <small>${project.created_at ? new Date(project.created_at).toLocaleDateString('ru-RU') : ''}</small>
+                </div>
+            </article>
+        `).join('');
+    }
+
+    getInitials(user) {
+        const first = (user.first_name || '').trim()[0] || '';
+        const last = (user.last_name || '').trim()[0] || '';
+        return `${first}${last}`.toUpperCase() || 'П';
     }
 
     initFilters() {

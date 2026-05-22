@@ -107,6 +107,13 @@
     </footer>
 
     <div id="message" class="message"></div>
+    <div id="adminUserModal" class="admin-modal" aria-hidden="true">
+        <div class="admin-modal-backdrop" data-close-user-modal></div>
+        <section class="admin-modal-panel" role="dialog" aria-modal="true" aria-labelledby="adminUserModalTitle">
+            <button type="button" class="admin-modal-close" data-close-user-modal aria-label="Закрыть">×</button>
+            <div id="adminUserModalContent"></div>
+        </section>
+    </div>
     <script src="../js/admin.js"></script>
 </body>
 </html>
