@@ -2,6 +2,7 @@ class Auth {
     constructor() {
         this.token = localStorage.getItem('token');
         this.initEvents();
+        this.initInteractiveShowcase();
     }
 
     initEvents() {
@@ -179,6 +180,61 @@ class Auth {
         if (!modal) return;
         modal.classList.remove('agreement-open');
         modal.setAttribute('aria-hidden', 'true');
+    }
+
+    initInteractiveShowcase() {
+        const page = document.querySelector('.auth-page');
+        const showcase = document.querySelector('.auth-showcase');
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+
+        if (!page || !showcase || reducedMotion || coarsePointer) return;
+
+        let targetX = 0;
+        let targetY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        let animationFrame = null;
+
+        const setTargetFromPointer = (event) => {
+            const rect = showcase.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            targetX = Math.max(-1, Math.min(1, (event.clientX - centerX) / (rect.width / 2)));
+            targetY = Math.max(-1, Math.min(1, (event.clientY - centerY) / (rect.height / 2)));
+
+            if (!animationFrame) {
+                animationFrame = window.requestAnimationFrame(animate);
+            }
+        };
+
+        const resetTarget = () => {
+            targetX = 0;
+            targetY = 0;
+
+            if (!animationFrame) {
+                animationFrame = window.requestAnimationFrame(animate);
+            }
+        };
+
+        const animate = () => {
+            currentX += (targetX - currentX) * 0.09;
+            currentY += (targetY - currentY) * 0.09;
+
+            page.style.setProperty('--auth-mx', currentX.toFixed(3));
+            page.style.setProperty('--auth-my', currentY.toFixed(3));
+
+            if (Math.abs(targetX - currentX) > 0.002 || Math.abs(targetY - currentY) > 0.002) {
+                animationFrame = window.requestAnimationFrame(animate);
+                return;
+            }
+
+            animationFrame = null;
+        };
+
+        showcase.addEventListener('pointermove', setTargetFromPointer);
+        showcase.addEventListener('pointerleave', resetTarget);
     }
 
     // Получение информации о текущем пользователе
