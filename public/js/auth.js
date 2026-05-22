@@ -34,8 +34,7 @@ class Auth {
 
     initAuthPageTransitions() {
         const page = document.querySelector('.auth-page');
-        const supportsViewTransitions = 'startViewTransition' in document;
-        if (!page || supportsViewTransitions) return;
+        if (!page) return;
 
         document.querySelectorAll('.auth-switch a[href="/"], .auth-switch a[href="/register"]').forEach(link => {
             link.addEventListener('click', event => {
@@ -45,12 +44,14 @@ class Auth {
                 if (!href || href === window.location.pathname) return;
 
                 event.preventDefault();
+                if (page.classList.contains('auth-exiting')) return;
+
                 page.classList.add('auth-exiting');
                 page.classList.toggle('auth-exiting-to-register', href === '/register');
                 page.classList.toggle('auth-exiting-to-login', href === '/');
                 window.setTimeout(() => {
                     window.location.href = href;
-                }, 420);
+                }, 620);
             });
         });
     }
