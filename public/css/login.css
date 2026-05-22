@@ -119,6 +119,11 @@ body::before {
     opacity: 0.82;
 }
 
+.auth-page-register .auth-panel::before {
+    right: auto;
+    left: 0;
+}
+
 .auth-panel::after {
     content: '';
     position: absolute;
