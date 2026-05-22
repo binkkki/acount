@@ -1,6 +1,11 @@
 class Auth {
     constructor() {
         this.token = localStorage.getItem('token');
+        this.authPageCache = new Map();
+        this.transitionInProgress = false;
+        this.networkAnimationFrame = null;
+        this.networkResizeHandler = null;
+        this.initAuthHistoryHandling();
         this.initEvents();
         this.initNetworkShowcase();
     }
@@ -37,6 +42,10 @@ class Auth {
         if (!page) return;
 
         document.querySelectorAll('.auth-switch a[href="/"], .auth-switch a[href="/register"]').forEach(link => {
+            link.addEventListener('pointerenter', () => {
+                this.prefetchAuthPage(link.getAttribute('href'));
+            }, { once: true });
+
             link.addEventListener('click', event => {
                 if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
@@ -44,16 +53,121 @@ class Auth {
                 if (!href || href === window.location.pathname) return;
 
                 event.preventDefault();
-                if (page.classList.contains('auth-exiting')) return;
-
-                page.classList.add('auth-exiting');
-                page.classList.toggle('auth-exiting-to-register', href === '/register');
-                page.classList.toggle('auth-exiting-to-login', href === '/');
-                window.setTimeout(() => {
-                    window.location.href = href;
-                }, 620);
+                this.navigateAuthPage(href);
             });
         });
+    }
+
+    async prefetchAuthPage(href) {
+        if (!href || this.authPageCache.has(href)) return;
+
+        try {
+            const response = await fetch(href);
+            if (!response.ok) return;
+            this.authPageCache.set(href, await response.text());
+        } catch (error) {
+            console.warn('Auth page prefetch failed:', error);
+        }
+    }
+
+    async getAuthPageDocument(href) {
+        if (!this.authPageCache.has(href)) {
+            await this.prefetchAuthPage(href);
+        }
+
+        const html = this.authPageCache.get(href);
+        if (!html) return null;
+        return new DOMParser().parseFromString(html, 'text/html');
+    }
+
+    initAuthHistoryHandling() {
+        window.addEventListener('popstate', () => {
+            if (window.location.pathname === '/' || window.location.pathname === '/register') {
+                this.navigateAuthPage(window.location.pathname, { updateHistory: false });
+            }
+        });
+    }
+
+    async navigateAuthPage(href, options = {}) {
+        const currentPage = document.querySelector('.auth-page');
+        if (!currentPage || this.transitionInProgress) return;
+
+        const currentIsRegister = currentPage.classList.contains('auth-page-register');
+        if ((href === '/register' && currentIsRegister) || (href === '/' && !currentIsRegister)) return;
+
+        this.transitionInProgress = true;
+        const toRegister = href === '/register';
+        const exitClass = toRegister ? 'auth-exiting-to-register' : 'auth-exiting-to-login';
+        const enterClass = toRegister ? 'auth-entering-from-login' : 'auth-entering-from-register';
+
+        document.body.classList.add('auth-transition-lock');
+        currentPage.classList.add('auth-exiting', exitClass);
+
+        try {
+            const [nextDocument] = await Promise.all([
+                this.getAuthPageDocument(href),
+                new Promise(resolve => window.setTimeout(resolve, 540))
+            ]);
+
+            if (!nextDocument) {
+                window.location.href = href;
+                return;
+            }
+
+            const nextPage = nextDocument.querySelector('.auth-page');
+            if (!nextPage) {
+                window.location.href = href;
+                return;
+            }
+
+            this.cleanupNetworkShowcase();
+            nextPage.classList.add('auth-entering', enterClass);
+            currentPage.replaceWith(nextPage);
+            this.syncAgreementModal(nextDocument);
+            document.title = nextDocument.title;
+            if (options.updateHistory !== false) {
+                window.history.pushState({}, '', href);
+            }
+            window.scrollTo(0, 0);
+
+            this.initEvents();
+            this.initNetworkShowcase();
+
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    nextPage.classList.remove('auth-entering', enterClass);
+                });
+            });
+
+            window.setTimeout(() => {
+                nextPage.classList.remove('auth-entering', enterClass);
+                document.body.classList.remove('auth-transition-lock');
+                this.transitionInProgress = false;
+            }, 920);
+        } catch (error) {
+            console.warn('Auth page transition failed:', error);
+            window.location.href = href;
+        }
+    }
+
+    syncAgreementModal(nextDocument) {
+        const currentModal = document.getElementById('agreementModal');
+        const nextModal = nextDocument.getElementById('agreementModal');
+        const authScript = document.querySelector('script[src*="auth.js"]');
+
+        if (currentModal && nextModal) {
+            currentModal.replaceWith(nextModal);
+            return;
+        }
+
+        if (currentModal && !nextModal) {
+            currentModal.remove();
+            return;
+        }
+
+        if (!currentModal && nextModal) {
+            document.body.insertBefore(nextModal, authScript);
+        }
     }
 
     async handleLogin(e) {
@@ -208,7 +322,21 @@ class Auth {
         modal.setAttribute('aria-hidden', 'true');
     }
 
+    cleanupNetworkShowcase() {
+        if (this.networkAnimationFrame) {
+            window.cancelAnimationFrame(this.networkAnimationFrame);
+            this.networkAnimationFrame = null;
+        }
+
+        if (this.networkResizeHandler) {
+            window.removeEventListener('resize', this.networkResizeHandler);
+            this.networkResizeHandler = null;
+        }
+    }
+
     initNetworkShowcase() {
+        this.cleanupNetworkShowcase();
+
         const showcase = document.querySelector('.auth-showcase');
         const canvas = showcase?.querySelector('.network-canvas');
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -355,13 +483,14 @@ class Auth {
             });
 
             if (!reducedMotion) {
-                window.requestAnimationFrame(draw);
+                this.networkAnimationFrame = window.requestAnimationFrame(draw);
             }
         };
 
         showcase.addEventListener('pointermove', setTargetFromPointer);
         showcase.addEventListener('pointerleave', resetTarget);
-        window.addEventListener('resize', resizeCanvas);
+        this.networkResizeHandler = resizeCanvas;
+        window.addEventListener('resize', this.networkResizeHandler);
 
         resizeCanvas();
         draw();
