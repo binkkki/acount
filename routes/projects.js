@@ -172,11 +172,16 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ error: 'Название проекта обязательно' });
         }
 
+        const parsedBudget = parseBudget(budget);
+        if (budget && parsedBudget === null) {
+            return res.status(400).json({ error: 'Укажите бюджет числом, например 12500 или 12 500,50' });
+        }
+
         const project = await Project.create({
             user_id: req.user.id,
             title: title.trim(),
             description: description?.trim(),
-            budget: budget ? parseFloat(budget) : null,
+            budget: parsedBudget,
             deadline: deadline || null,
             brief
         });
@@ -254,6 +259,19 @@ function approvalStatusToText(status) {
         changes: 'нужны правки'
     };
     return map[status] || status;
+}
+
+function parseBudget(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const normalized = String(value)
+        .trim()
+        .replace(/\s/g, '')
+        .replace(',', '.')
+        .replace(/[^\d.]/g, '');
+    if (!normalized) return null;
+
+    const amount = Number(normalized);
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
 }
 
 async function notifyAdminsAboutNewProject(project, user) {

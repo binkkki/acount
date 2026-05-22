@@ -246,7 +246,7 @@ class Dashboard {
         const payload = {
             title: document.getElementById('projectTitle')?.value.trim(),
             description: document.getElementById('projectDescription')?.value.trim(),
-            budget: document.getElementById('projectBudget')?.value || null,
+            budget: this.normalizeMoneyInput(document.getElementById('projectBudget')?.value),
             deadline: document.getElementById('projectDeadline')?.value || null,
             brief: {
                 type: document.getElementById('projectType')?.value.trim() || '',
@@ -1102,6 +1102,14 @@ class Dashboard {
             hour: '2-digit',
             minute: '2-digit'
         }) : 'Дата неизвестна';
+    }
+
+    normalizeMoneyInput(value) {
+        const normalized = String(value || '')
+            .replace(/\s/g, '')
+            .replace(',', '.')
+            .replace(/[^\d.]/g, '');
+        return normalized || null;
     }
 
     formatBytes(value) {
