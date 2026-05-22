@@ -2,7 +2,7 @@ class Auth {
     constructor() {
         this.token = localStorage.getItem('token');
         this.initEvents();
-        this.initInteractiveShowcase();
+        this.initNetworkShowcase();
     }
 
     initEvents() {
@@ -182,59 +182,163 @@ class Auth {
         modal.setAttribute('aria-hidden', 'true');
     }
 
-    initInteractiveShowcase() {
-        const page = document.querySelector('.auth-page');
+    initNetworkShowcase() {
         const showcase = document.querySelector('.auth-showcase');
+        const canvas = showcase?.querySelector('.network-canvas');
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+        const ctx = canvas?.getContext('2d');
 
-        if (!page || !showcase || reducedMotion || coarsePointer) return;
+        if (!showcase || !canvas || !ctx) return;
 
-        let targetX = 0;
-        let targetY = 0;
-        let currentX = 0;
-        let currentY = 0;
-        let animationFrame = null;
+        const state = {
+            width: 0,
+            height: 0,
+            dpr: 1,
+            points: [],
+            mouse: {
+                x: 0,
+                y: 0,
+                targetX: 0,
+                targetY: 0,
+                active: false
+            }
+        };
+
+        const random = (min, max) => min + Math.random() * (max - min);
+
+        const createPoint = () => ({
+            x: random(-30, state.width + 30),
+            y: random(-30, state.height + 30),
+            vx: random(-0.24, 0.24),
+            vy: random(-0.24, 0.24),
+            radius: random(1.7, 4.1),
+            pulse: random(0, Math.PI * 2)
+        });
+
+        const resizeCanvas = () => {
+            const rect = showcase.getBoundingClientRect();
+            state.width = Math.max(1, rect.width);
+            state.height = Math.max(1, rect.height);
+            state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+            canvas.width = Math.round(state.width * state.dpr);
+            canvas.height = Math.round(state.height * state.dpr);
+            canvas.style.width = `${state.width}px`;
+            canvas.style.height = `${state.height}px`;
+            ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+
+            const density = Math.round((state.width * state.height) / 5600);
+            const count = Math.max(52, Math.min(138, density));
+            state.points = Array.from({ length: count }, createPoint);
+            state.mouse.x = state.width / 2;
+            state.mouse.y = state.height / 2;
+            state.mouse.targetX = state.mouse.x;
+            state.mouse.targetY = state.mouse.y;
+        };
 
         const setTargetFromPointer = (event) => {
-            const rect = showcase.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-
-            targetX = Math.max(-1, Math.min(1, (event.clientX - centerX) / (rect.width / 2)));
-            targetY = Math.max(-1, Math.min(1, (event.clientY - centerY) / (rect.height / 2)));
-
-            if (!animationFrame) {
-                animationFrame = window.requestAnimationFrame(animate);
-            }
+            const rect = canvas.getBoundingClientRect();
+            state.mouse.targetX = event.clientX - rect.left;
+            state.mouse.targetY = event.clientY - rect.top;
+            state.mouse.active = true;
         };
 
         const resetTarget = () => {
-            targetX = 0;
-            targetY = 0;
-
-            if (!animationFrame) {
-                animationFrame = window.requestAnimationFrame(animate);
-            }
+            state.mouse.active = false;
         };
 
-        const animate = () => {
-            currentX += (targetX - currentX) * 0.09;
-            currentY += (targetY - currentY) * 0.09;
+        const movePoint = (point) => {
+            if (state.mouse.active) {
+                const dx = point.x - state.mouse.x;
+                const dy = point.y - state.mouse.y;
+                const distance = Math.hypot(dx, dy) || 1;
+                const radius = Math.min(210, Math.max(145, state.width * 0.24));
 
-            page.style.setProperty('--auth-mx', currentX.toFixed(3));
-            page.style.setProperty('--auth-my', currentY.toFixed(3));
-
-            if (Math.abs(targetX - currentX) > 0.002 || Math.abs(targetY - currentY) > 0.002) {
-                animationFrame = window.requestAnimationFrame(animate);
-                return;
+                if (distance < radius) {
+                    const force = (1 - distance / radius) * 0.032;
+                    point.vx += (dx / distance) * force;
+                    point.vy += (dy / distance) * force;
+                }
             }
 
-            animationFrame = null;
+            point.x += point.vx;
+            point.y += point.vy;
+            point.vx *= 0.988;
+            point.vy *= 0.988;
+            point.pulse += 0.018;
+
+            if (point.x < -40) point.x = state.width + 40;
+            if (point.x > state.width + 40) point.x = -40;
+            if (point.y < -40) point.y = state.height + 40;
+            if (point.y > state.height + 40) point.y = -40;
+        };
+
+        const drawLine = (from, to, maxDistance, multiplier = 1) => {
+            const distance = Math.hypot(from.x - to.x, from.y - to.y);
+            if (distance > maxDistance) return;
+
+            const opacity = (1 - distance / maxDistance) * multiplier;
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.strokeStyle = `rgba(67, 210, 210, ${opacity})`;
+            ctx.lineWidth = 1.15;
+            ctx.stroke();
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, state.width, state.height);
+            state.mouse.x += (state.mouse.targetX - state.mouse.x) * 0.1;
+            state.mouse.y += (state.mouse.targetY - state.mouse.y) * 0.1;
+
+            if (!reducedMotion) {
+                state.points.forEach(movePoint);
+            }
+
+            const connectionDistance = state.width < 520 ? 138 : 188;
+
+            for (let i = 0; i < state.points.length; i += 1) {
+                for (let j = i + 1; j < state.points.length; j += 1) {
+                    drawLine(state.points[i], state.points[j], connectionDistance, 0.52);
+                }
+            }
+
+            if (state.mouse.active) {
+                state.points.forEach(point => {
+                    drawLine(point, state.mouse, 230, 0.86);
+                });
+
+                ctx.beginPath();
+                ctx.arc(state.mouse.x, state.mouse.y, 5.2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(77, 232, 232, 0.96)';
+                ctx.shadowColor = 'rgba(77, 232, 232, 0.88)';
+                ctx.shadowBlur = 18;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            state.points.forEach(point => {
+                const glow = 0.74 + Math.sin(point.pulse) * 0.16;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, point.radius * glow, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(77, 232, 232, 0.96)';
+                ctx.shadowColor = 'rgba(77, 232, 232, 0.82)';
+                ctx.shadowBlur = 17;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            if (!reducedMotion) {
+                window.requestAnimationFrame(draw);
+            }
         };
 
         showcase.addEventListener('pointermove', setTargetFromPointer);
         showcase.addEventListener('pointerleave', resetTarget);
+        window.addEventListener('resize', resizeCanvas);
+
+        resizeCanvas();
+        draw();
     }
 
     // Получение информации о текущем пользователе
