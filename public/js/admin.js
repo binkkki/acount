@@ -95,7 +95,10 @@ class AdminPanel {
 
         list.innerHTML = this.notifications.length ? this.notifications.map(notification => `
             <li class="notification-item ${notification.is_read ? '' : 'notification-unread'}" data-notification-id="${notification.id}" data-project-id="${notification.project_id || ''}">
-                <strong>${this.escapeHtml(notification.title)}</strong>
+                <div class="admin-notification-head">
+                    ${this.renderNotificationBadge(notification.type)}
+                    <strong>${this.escapeHtml(notification.title)}</strong>
+                </div>
                 ${notification.body ? `<p>${this.escapeHtml(notification.body)}</p>` : ''}
                 <time>${new Date(notification.created_at).toLocaleString('ru-RU')}</time>
             </li>
@@ -190,6 +193,20 @@ class AdminPanel {
                 `).join('')}
             </div>
         `;
+    }
+
+    renderNotificationBadge(type) {
+        const labels = {
+            admin_new_user: 'Новый пользователь',
+            admin_new_project: 'Новый проект',
+            file: 'Файл',
+            message: 'Сообщение',
+            status: 'Статус',
+            approval: 'Согласование',
+            note: 'Заметка'
+        };
+        const label = labels[type] || 'Уведомление';
+        return `<span class="admin-notification-badge type-${this.escapeHtml(type || 'info')}">${this.escapeHtml(label)}</span>`;
     }
 
     initFilters() {

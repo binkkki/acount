@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 const router = express.Router();
 
@@ -38,6 +39,8 @@ router.post('/register', async (req, res) => {
         }
 
         const user = await User.create({ email, password, firstName, lastName, phone, company, acceptedTerms });
+        await notifyAdminsAboutNewUser(user);
+
         const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
         res.status(201).json({ message: 'Пользователь успешно зарегистрирован', user: toClientUser(user), token });
@@ -46,6 +49,27 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'Ошибка при регистрации' });
     }
 });
+
+async function notifyAdminsAboutNewUser(user) {
+    try {
+        const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+        const details = [
+            `Пользователь: ${fullName}`,
+            `Email: ${user.email}`,
+            user.phone ? `Телефон: ${user.phone}` : null,
+            user.company ? `Компания: ${user.company}` : null
+        ].filter(Boolean).join('\n');
+
+        await Notification.createForAdmins({
+            actor_id: user.id,
+            type: 'admin_new_user',
+            title: 'Зарегистрирован новый пользователь',
+            body: details
+        });
+    } catch (error) {
+        console.error('Admin new user notification error:', error);
+    }
+}
 
 router.post('/login', async (req, res) => {
     try {

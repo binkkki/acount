@@ -180,6 +180,7 @@ router.post('/', auth, async (req, res) => {
             deadline: deadline || null,
             brief
         });
+        await notifyAdminsAboutNewProject(project, req.user);
 
         res.status(201).json({ message: 'Проект успешно создан', project });
     } catch (error) {
@@ -253,6 +254,30 @@ function approvalStatusToText(status) {
         changes: 'нужны правки'
     };
     return map[status] || status;
+}
+
+async function notifyAdminsAboutNewProject(project, user) {
+    try {
+        const clientName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+        const details = [
+            `Клиент: ${clientName}`,
+            `Email: ${user.email}`,
+            project.description ? `Описание: ${project.description}` : null,
+            project.budget ? `Бюджет: ${project.budget}` : null,
+            project.deadline ? `Срок: ${new Date(project.deadline).toLocaleDateString('ru-RU')}` : null
+        ].filter(Boolean).join('\n');
+
+        await Notification.createForAdmins({
+            project_id: project.id,
+            actor_id: user.id,
+            type: 'admin_new_project',
+            title: `Создан новый проект "${project.title}"`,
+            body: details,
+            excludeUserId: user.role === 'admin' ? user.id : null
+        });
+    } catch (error) {
+        console.error('Admin new project notification error:', error);
+    }
 }
 
 module.exports = router;

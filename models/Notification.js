@@ -28,6 +28,24 @@ class Notification {
         return result.rows[0];
     }
 
+    static async createForAdmins({ project_id = null, actor_id = null, type = 'admin', title, body = '', excludeUserId = null }) {
+        const params = excludeUserId ? [excludeUserId] : [];
+        const excludeCondition = excludeUserId ? 'AND id != $1' : '';
+        const admins = await pool.query(
+            `SELECT id FROM users WHERE role = 'admin' ${excludeCondition}`,
+            params
+        );
+
+        return Promise.all(admins.rows.map(admin => Notification.create({
+            user_id: admin.id,
+            project_id,
+            actor_id,
+            type,
+            title,
+            body
+        })));
+    }
+
     static async findByUserId(userId) {
         const result = await pool.query(
             `SELECT n.*, p.title AS project_title
