@@ -1757,27 +1757,37 @@ button:active,
 }
 
 .file-upload-panel {
-    grid-template-columns: minmax(240px, 320px) 1fr;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+    align-items: end;
 }
 
 .upload-form {
     margin-top: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
+    min-width: 0;
+}
+
+.file-upload-panel .select-field,
+.upload-form input[type="file"] {
+    min-width: 0;
 }
 
 .files-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
     gap: 1rem;
 }
 
 .file-card {
     display: grid;
-    grid-template-columns: 48px 1fr auto;
+    grid-template-columns: 48px minmax(0, 1fr) 38px;
     gap: 0.85rem;
-    align-items: center;
+    align-items: start;
     padding: 1rem;
     min-height: 92px;
+    min-width: 0;
     border: 1px solid var(--line);
     border-radius: 14px;
     background: var(--surface-card);
@@ -2385,18 +2395,104 @@ button:active,
 }
 
 .file-comments form {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
 }
 
 .file-comments input {
-    flex: 1;
     min-width: 0;
     padding: 0.65rem 0.75rem;
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--input-bg);
     color: var(--text-color);
+}
+
+.file-comments .btn-small {
+    min-width: 44px;
+    min-height: 40px;
+    padding: 0 0.75rem;
+    box-shadow: none;
+}
+
+body.dark-theme input,
+body.dark-theme textarea,
+body.dark-theme select,
+body.dark-theme .form-group input,
+body.dark-theme .form-group textarea,
+body.dark-theme .large-textarea,
+body.dark-theme .search-field input,
+body.dark-theme .select-field select,
+body.dark-theme #projectSelect,
+body.dark-theme #fileProjectSelect,
+body.dark-theme .chat-form input,
+body.dark-theme .upload-form input[type="file"],
+body.dark-theme .file-comments input,
+body.dark-theme .admin-project-controls textarea {
+    background: var(--input-bg);
+    color: var(--text-color);
+    caret-color: var(--prana-green-2);
+}
+
+body.dark-theme input:focus,
+body.dark-theme textarea:focus,
+body.dark-theme select:focus,
+body.dark-theme .form-group input:focus,
+body.dark-theme .form-group textarea:focus,
+body.dark-theme .large-textarea:focus,
+body.dark-theme .file-comments input:focus {
+    background: #1e2a2d;
+    color: #eef6f4;
+    border-color: var(--prana-green-2);
+    box-shadow: 0 0 0 4px rgba(52, 196, 177, 0.16);
+    outline: none;
+}
+
+body.dark-theme input::placeholder,
+body.dark-theme textarea::placeholder {
+    color: rgba(238, 246, 244, 0.48);
+}
+
+body.dark-theme input:-webkit-autofill,
+body.dark-theme input:-webkit-autofill:hover,
+body.dark-theme input:-webkit-autofill:focus,
+body.dark-theme textarea:-webkit-autofill,
+body.dark-theme textarea:-webkit-autofill:hover,
+body.dark-theme textarea:-webkit-autofill:focus,
+body.dark-theme select:-webkit-autofill {
+    -webkit-text-fill-color: #eef6f4;
+    caret-color: #eef6f4;
+    box-shadow: 0 0 0 1000px #1e2a2d inset;
+    transition: background-color 9999s ease-out;
+}
+
+.bot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+}
+
+.bot-action {
+    min-height: 34px;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid rgba(52, 196, 177, 0.42);
+    border-radius: 999px;
+    background: rgba(52, 196, 177, 0.12);
+    color: var(--text-color);
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: none;
+}
+
+.bot-action:hover {
+    background: var(--prana-green);
+    border-color: var(--prana-green);
+    color: #ffffff;
+    transform: translateY(-1px);
 }
 
 @media (max-width: 900px) {
@@ -2413,6 +2509,51 @@ button:active,
 
     .focus-actions {
         align-items: stretch;
+        width: 100%;
+    }
+}
+
+@media (max-width: 1100px) {
+    .file-upload-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .upload-form {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+}
+
+@media (max-width: 620px) {
+    .upload-form {
+        grid-template-columns: 1fr;
+    }
+
+    .upload-form .btn-primary,
+    .upload-form button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .file-card {
+        grid-template-columns: 44px minmax(0, 1fr);
+    }
+
+    .file-card-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .file-card .btn-icon-danger {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .file-comments form {
+        grid-template-columns: 1fr;
+    }
+
+    .file-comments .btn-small {
         width: 100%;
     }
 }

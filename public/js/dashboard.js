@@ -1051,9 +1051,11 @@ class Dashboard {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: text })
                 });
-                this.addBotMessage('bot', data.reply || this.getBotReply(text));
+                const reply = data.reply || this.getBotReply(text);
+                this.addBotMessage('bot', reply, this.getBotActions(text, reply));
             } catch (err) {
-                this.addBotMessage('bot', this.getBotReply(text));
+                const reply = this.getBotReply(text);
+                this.addBotMessage('bot', reply, this.getBotActions(text, reply));
             } finally {
                 botInput.disabled = false;
                 botInput.focus();
@@ -1061,19 +1063,105 @@ class Dashboard {
         });
     }
 
-    addBotMessage(sender, text) {
+    addBotMessage(sender, text, actions = []) {
         const botMessages = document.getElementById('botMessages');
         if (!botMessages) return;
         const row = document.createElement('div');
         row.className = `chat-row ${sender === 'user' ? 'chat-row-user' : 'chat-row-operator'}`;
+        const actionsHtml = sender !== 'user' && actions.length
+            ? `<div class="bot-actions">
+                ${actions.map(action => `
+                    <button type="button"
+                            class="bot-action"
+                            data-bot-action="${this.escapeHtml(action.type)}"
+                            data-bot-target="${this.escapeHtml(action.target || '')}"
+                            data-bot-modal="${this.escapeHtml(action.modal || '')}"
+                            data-bot-url="${this.escapeHtml(action.url || '')}">
+                        ${this.escapeHtml(action.label)}
+                    </button>
+                `).join('')}
+            </div>`
+            : '';
         row.innerHTML = `
             <div class="chat-bubble">
                 <span class="chat-text">${this.escapeHtml(text)}</span>
+                ${actionsHtml}
             </div>
             <time>${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</time>
         `;
+        row.querySelectorAll('[data-bot-action]').forEach(button => {
+            button.addEventListener('click', () => this.handleBotAction(button.dataset));
+        });
         botMessages.appendChild(row);
         botMessages.scrollTop = botMessages.scrollHeight;
+    }
+
+    handleBotAction(dataset) {
+        const { botAction, botTarget, botModal, botUrl } = dataset;
+        if (botAction === 'section' && botTarget) {
+            this.switchSection(botTarget);
+            this.scrollDashboardIntoView();
+        }
+        if (botAction === 'modal' && botModal) {
+            this.switchSection(botTarget || 'projects');
+            setTimeout(() => this.showModal(botModal), 120);
+            this.scrollDashboardIntoView();
+        }
+        if (botAction === 'external' && botUrl) {
+            window.open(botUrl, '_blank', 'noopener,noreferrer');
+        }
+    }
+
+    scrollDashboardIntoView() {
+        document.querySelector('.content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    getBotActions(text, reply = '') {
+        const lower = `${text || ''} ${reply || ''}`.toLowerCase();
+        const actions = [];
+        const has = words => words.some(word => lower.includes(word));
+        const add = action => {
+            if (!actions.some(item => item.type === action.type && item.target === action.target && item.modal === action.modal && item.url === action.url)) {
+                actions.push(action);
+            }
+        };
+
+        if (has(['создать проект', 'новый проект', 'оставить заявку', 'заявк'])) {
+            add({ label: 'Создать проект', type: 'modal', target: 'projects', modal: 'projectModal' });
+        }
+
+        if (has(['файл', 'документ', 'загруз', 'скач'])) {
+            add({ label: 'Открыть файлы', type: 'section', target: 'files' });
+        }
+
+        if (has(['сообщ', 'чат', 'переписк', 'оператор', 'админ'])) {
+            add({ label: 'Открыть сообщения', type: 'section', target: 'chat' });
+        }
+
+        if (has(['оплат', 'платеж', 'счет', 'транзакц'])) {
+            add({ label: 'Открыть платежи', type: 'section', target: 'payments' });
+        }
+
+        if (has(['настрой', 'парол', 'язык', 'уведомл'])) {
+            add({ label: 'Открыть настройки', type: 'section', target: 'settings' });
+        }
+
+        if (has(['профил', 'данные', 'телефон', 'почт', 'email'])) {
+            add({ label: 'Открыть профиль', type: 'section', target: 'profile' });
+        }
+
+        if (has(['контакт', 'связь', 'сайт', 'главн'])) {
+            add({ label: 'Сайт PRANA IT', type: 'external', url: 'https://pranait.ru/' });
+        }
+
+        if (has(['проект', 'статус', 'этап', 'соглас', 'правк'])) {
+            add({ label: 'Открыть проекты', type: 'section', target: 'projects' });
+            if (this.currentProjectId) {
+                add({ label: 'Текущий проект', type: 'section', target: 'projectDetail' });
+            }
+        }
+
+        return actions.slice(0, 3);
     }
 
     getBotReply(text) {
