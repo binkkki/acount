@@ -177,6 +177,14 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ error: 'Укажите бюджет числом, например 12500 или 12 500,50' });
         }
 
+        if (parsedBudget !== null && parsedBudget > 999999999999.99) {
+            return res.status(400).json({ error: 'Бюджет не должен превышать 999 999 999 999,99 ₽' });
+        }
+
+        if (deadline && isPastDate(deadline)) {
+            return res.status(400).json({ error: 'Срок проекта не может быть раньше сегодняшнего дня' });
+        }
+
         const project = await Project.create({
             user_id: req.user.id,
             title: title.trim(),
@@ -216,7 +224,22 @@ router.put('/:id', auth, async (req, res) => {
         const projectId = parseInt(req.params.id, 10);
         if (isNaN(projectId)) return res.status(400).json({ error: 'Неверный ID проекта' });
 
-        const project = await Project.update(projectId, req.user.id, req.body);
+        const parsedBudget = parseBudget(req.body.budget);
+        if (req.body.budget && parsedBudget === null) {
+            return res.status(400).json({ error: 'Укажите бюджет числом, например 12500 или 12 500,50' });
+        }
+        if (parsedBudget !== null && parsedBudget > 999999999999.99) {
+            return res.status(400).json({ error: 'Бюджет не должен превышать 999 999 999 999,99 ₽' });
+        }
+        if (req.body.deadline && isPastDate(req.body.deadline)) {
+            return res.status(400).json({ error: 'Срок проекта не может быть раньше сегодняшнего дня' });
+        }
+
+        const project = await Project.update(projectId, req.user.id, {
+            ...req.body,
+            budget: parsedBudget,
+            deadline: req.body.deadline || null
+        });
         if (!project) return res.status(404).json({ error: 'Проект не найден' });
 
         res.json({ message: 'Проект обновлен', project });
@@ -270,8 +293,21 @@ function parseBudget(value) {
         .replace(/[^\d.]/g, '');
     if (!normalized) return null;
 
+    if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
     const amount = Number(normalized);
     return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+function isPastDate(value) {
+    const date = String(value || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return true;
+    const today = new Date();
+    const todayIso = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, '0'),
+        String(today.getDate()).padStart(2, '0')
+    ].join('-');
+    return date < todayIso;
 }
 
 async function notifyAdminsAboutNewProject(project, user) {

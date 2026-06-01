@@ -96,7 +96,7 @@ const initDatabase = async () => {
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
                 status VARCHAR(50) DEFAULT 'new',
-                budget DECIMAL(10, 2),
+                budget DECIMAL(14, 2),
                 deadline DATE,
                 brief JSONB DEFAULT '{}'::jsonb,
                 assigned_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -106,6 +106,7 @@ const initDatabase = async () => {
 
             ALTER TABLE projects ADD COLUMN IF NOT EXISTS brief JSONB DEFAULT '{}'::jsonb;
             ALTER TABLE projects ADD COLUMN IF NOT EXISTS assigned_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+            ALTER TABLE projects ALTER COLUMN budget TYPE DECIMAL(14, 2);
 
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,

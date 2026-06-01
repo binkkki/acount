@@ -27,12 +27,24 @@ router.put('/profile', auth, async (req, res) => {
             notifyStatus,
             notifyNotes
         } = req.body;
+        if (!firstName || !lastName || !email) {
+            return res.status(400).json({ error: 'Имя, фамилия и email обязательны' });
+        }
+
+        if (!isValidEmail(email)) {
+            return res.status(400).json({ error: 'Введите корректный email' });
+        }
+
+        if (phone && !isValidPhone(phone)) {
+            return res.status(400).json({ error: 'Введите телефон в формате +7XXXXXXXXXX' });
+        }
+
         const updatedUser = await User.update(req.user.id, {
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            phone,
-            company,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            email: email.trim().toLowerCase(),
+            phone: normalizePhone(phone),
+            company: company?.trim() || null,
             notify_email: notifyEmail === true,
             notify_messages: notifyMessages !== false,
             notify_status: notifyStatus !== false,
@@ -40,6 +52,9 @@ router.put('/profile', auth, async (req, res) => {
         });
         res.json({ message: 'Профиль обновлен', user: updatedUser });
     } catch (error) {
+        if (error.code === '23505') {
+            return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+        }
         res.status(500).json({ error: 'Ошибка обновления профиля' });
     }
 });
@@ -136,5 +151,22 @@ router.delete('/:id', adminAuth, async (req, res) => {
         res.status(500).json({ error: 'Ошибка удаления пользователя' });
     }
 });
+
+function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || '').trim());
+}
+
+function normalizePhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return null;
+    const normalized = digits[0] === '8' ? `7${digits.slice(1)}` : digits;
+    return normalized.length === 11 && normalized[0] === '7' ? `+${normalized}` : value;
+}
+
+function isValidPhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    const normalized = digits[0] === '8' ? `7${digits.slice(1)}` : digits;
+    return normalized.length === 11 && normalized[0] === '7';
+}
 
 module.exports = router;

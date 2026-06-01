@@ -11,6 +11,7 @@ class Dashboard {
         this.projectSearchQuery = '';
         this.globalSearchQuery = '';
         this.projectStatusFilter = 'all';
+        this.projectTagFilter = 'all';
         this.showArchiveProjects = false;
         this.projectDetails = null;
         this.currentNotificationId = null;
@@ -20,6 +21,8 @@ class Dashboard {
         this.audioContext = null;
         this.language = localStorage.getItem('language') || 'ru';
         this.translationMap = this.buildTranslationMap();
+        this.profileInitialState = '';
+        this.notificationsPanelCollapsed = false;
         this.init();
     }
 
@@ -82,12 +85,15 @@ class Dashboard {
         this.setValue('updateFirstName', user.first_name || '');
         this.setValue('updateLastName', user.last_name || '');
         this.setValue('updateEmail', user.email || '');
-        this.setValue('updatePhone', user.phone || '');
+        this.setValue('updatePhone', this.formatPhoneInput(user.phone || ''));
         this.setValue('updateCompany', user.company || '');
         this.setChecked('notifyEmail', user.notify_email === true);
         this.setChecked('notifyMessages', user.notify_messages !== false);
         this.setChecked('notifyStatus', user.notify_status !== false);
         this.setChecked('notifyNotes', user.notify_notes !== false);
+        this.profileInitialState = this.getProfileFormState();
+        this.clearFieldErrors('updateEmail', 'updatePhone');
+        this.updateProfileSaveState();
 
         const adminLink = document.getElementById('adminLink');
         if (adminLink) adminLink.style.display = user.role === 'admin' ? 'block' : 'none';
@@ -99,11 +105,13 @@ class Dashboard {
 
     async updateProfile(event) {
         event.preventDefault();
+        if (!this.validateProfileForm()) return;
+
         const payload = {
             firstName: document.getElementById('updateFirstName')?.value.trim(),
             lastName: document.getElementById('updateLastName')?.value.trim(),
             email: document.getElementById('updateEmail')?.value.trim(),
-            phone: document.getElementById('updatePhone')?.value.trim(),
+            phone: this.normalizePhoneForSave(document.getElementById('updatePhone')?.value.trim()),
             company: document.getElementById('updateCompany')?.value.trim(),
             notifyEmail: document.getElementById('notifyEmail')?.checked === true,
             notifyMessages: document.getElementById('notifyMessages')?.checked !== false,
@@ -144,6 +152,7 @@ class Dashboard {
         const container = document.getElementById('projectsGrid');
         if (!container) return;
 
+        this.renderProjectTags();
         const visibleProjects = this.getFilteredProjects();
 
         if (this.projects.length === 0) {
@@ -160,7 +169,7 @@ class Dashboard {
             container.innerHTML = `
                 <div class="empty-state">
                     <h3>Ничего не найдено</h3>
-                    <p>Попробуйте изменить поисковый запрос или статус.</p>
+                    <p>Попробуйте изменить поиск, статус или выбранный тег.</p>
                 </div>
             `;
             return;
@@ -190,6 +199,7 @@ class Dashboard {
         const owner = this.userRole === 'admin'
             ? `<p class="project-owner">Клиент: ${this.escapeHtml(project.first_name || '')} ${this.escapeHtml(project.last_name || '')}<br>${this.escapeHtml(project.user_email || '')}</p>`
             : '';
+        const tags = this.getProjectTagsForProject(project);
 
         const adminControls = this.userRole === 'admin' ? `
             <div class="admin-project-controls">
@@ -215,6 +225,7 @@ class Dashboard {
                     <span class="project-status status-${project.status}">${this.getStatusText(project.status)}</span>
                 </div>
                 <p class="project-description">${this.escapeHtml(project.description || 'Описание не указано')}</p>
+                ${tags.length ? `<div class="project-card-tags">${tags.map(tag => `<span>${this.escapeHtml(tag)}</span>`).join('')}</div>` : ''}
                 ${owner}
                 <div class="project-meta">
                     ${project.budget ? `<span>${Number(project.budget).toLocaleString('ru-RU')} ₽</span>` : '<span>Бюджет не указан</span>'}
@@ -253,6 +264,8 @@ class Dashboard {
 
     async createProject(event) {
         event.preventDefault();
+        if (!this.validateProjectForm()) return;
+
         const payload = {
             title: document.getElementById('projectTitle')?.value.trim(),
             description: document.getElementById('projectDescription')?.value.trim(),
@@ -271,6 +284,7 @@ class Dashboard {
                 body: JSON.stringify(payload)
             });
             document.getElementById('newProjectForm')?.reset();
+            this.clearFieldErrors('projectBudget', 'projectDeadline');
             this.hideModal('projectModal');
             await this.loadProjects();
             this.showMessage('Проект создан', 'success');
@@ -869,16 +883,43 @@ class Dashboard {
     initEvents() {
         document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
         document.getElementById('updateProfileForm')?.addEventListener('submit', event => this.updateProfile(event));
+        document.getElementById('updateProfileForm')?.addEventListener('input', event => this.handleProfileFormInput(event));
+        document.getElementById('updateProfileForm')?.addEventListener('change', () => this.updateProfileSaveState());
         document.getElementById('changePasswordForm')?.addEventListener('submit', event => this.changePassword(event));
         document.getElementById('openDeleteAccountModal')?.addEventListener('click', () => this.showModal('deleteAccountModal'));
         document.getElementById('deleteAccountForm')?.addEventListener('submit', event => this.deleteAccount(event));
         document.getElementById('cancelDeleteAccountBtn')?.addEventListener('click', () => this.hideModal('deleteAccountModal'));
         document.getElementById('newProjectBtn')?.addEventListener('click', () => this.showModal('projectModal'));
         document.getElementById('newProjectForm')?.addEventListener('submit', event => this.createProject(event));
+        document.getElementById('projectBudget')?.addEventListener('input', event => this.handleBudgetInput(event));
+        document.getElementById('projectDeadline')?.addEventListener('change', () => this.validateProjectDateField());
         document.getElementById('cancelProjectBtn')?.addEventListener('click', () => this.hideModal('projectModal'));
         document.getElementById('chatForm')?.addEventListener('submit', event => this.sendMessage(event));
         document.getElementById('uploadForm')?.addEventListener('submit', event => this.uploadFile(event));
         document.getElementById('markProfileNotificationsReadBtn')?.addEventListener('click', () => this.markAllNotificationsRead());
+        document.getElementById('openNotificationsPanelBtn')?.addEventListener('click', event => {
+            event.stopPropagation();
+            this.openNotificationsPanel();
+        });
+        document.getElementById('toggleNotificationsPanelBtn')?.addEventListener('click', event => {
+            event.stopPropagation();
+            this.toggleNotificationsPanel();
+        });
+        document.getElementById('closeNotificationsPanelBtn')?.addEventListener('click', event => {
+            event.stopPropagation();
+            this.closeNotificationsPanel();
+        });
+        document.querySelector('.notifications-panel')?.addEventListener('click', event => event.stopPropagation());
+        document.addEventListener('click', event => {
+            if (!event.target.closest?.('.notifications-panel, #openNotificationsPanelBtn, #notificationsWidget')) {
+                this.closeNotificationsPanel();
+            }
+        });
+        document.getElementById('notificationsWidget')?.addEventListener('click', () => this.openNotificationsPanel());
+        document.getElementById('resetProjectTagFilter')?.addEventListener('click', () => {
+            this.projectTagFilter = 'all';
+            this.displayProjects();
+        });
         document.getElementById('projectSearchInput')?.addEventListener('input', event => {
             this.projectSearchQuery = event.target.value.trim().toLowerCase();
             this.displayProjects();
@@ -918,6 +959,205 @@ class Dashboard {
         document.querySelectorAll('[data-section-jump]').forEach(button => {
             button.addEventListener('click', () => this.switchSection(button.dataset.sectionJump));
         });
+        this.setProjectDateMin();
+    }
+
+    handleProfileFormInput(event) {
+        if (event.target?.id === 'updatePhone') {
+            event.target.value = this.formatPhoneInput(event.target.value);
+        }
+        if (event.target?.id === 'updateEmail') this.clearFieldErrors('updateEmail');
+        if (event.target?.id === 'updatePhone') this.clearFieldErrors('updatePhone');
+        this.updateProfileSaveState();
+    }
+
+    getProfileFormState() {
+        const fields = ['updateFirstName', 'updateLastName', 'updateEmail', 'updatePhone', 'updateCompany'];
+        const values = fields.map(id => document.getElementById(id)?.value.trim() || '');
+        const checks = ['notifyEmail', 'notifyMessages', 'notifyStatus', 'notifyNotes']
+            .map(id => document.getElementById(id)?.checked === true ? '1' : '0');
+        return JSON.stringify([...values, ...checks]);
+    }
+
+    updateProfileSaveState() {
+        const button = document.getElementById('profileSaveBtn');
+        if (!button) return;
+        const changed = this.getProfileFormState() !== this.profileInitialState;
+        button.disabled = !changed;
+        button.classList.toggle('is-ready', changed);
+    }
+
+    validateProfileForm() {
+        this.clearFieldErrors('updateEmail', 'updatePhone');
+        let isValid = true;
+        const email = document.getElementById('updateEmail')?.value.trim() || '';
+        const phone = document.getElementById('updatePhone')?.value.trim() || '';
+
+        if (!this.isValidEmail(email)) {
+            this.setFieldError('updateEmail', 'Введите корректный email, например name@example.com');
+            isValid = false;
+        }
+
+        if (phone && !this.isValidPhone(phone)) {
+            this.setFieldError('updatePhone', 'Введите телефон в формате +7 (999) 123-45-67');
+            isValid = false;
+        }
+
+        if (!isValid) this.showMessage('Проверьте email и телефон в настройках', 'error');
+        return isValid;
+    }
+
+    isValidEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || '').trim());
+    }
+
+    formatPhoneInput(value) {
+        let digits = String(value || '').replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits[0] === '8') digits = `7${digits.slice(1)}`;
+        if (digits[0] !== '7') digits = `7${digits}`;
+        digits = digits.slice(0, 11);
+
+        const parts = ['+7'];
+        if (digits.length > 1) parts.push(` (${digits.slice(1, 4)}`);
+        if (digits.length >= 4) parts[1] += ')';
+        if (digits.length > 4) parts.push(` ${digits.slice(4, 7)}`);
+        if (digits.length > 7) parts.push(`-${digits.slice(7, 9)}`);
+        if (digits.length > 9) parts.push(`-${digits.slice(9, 11)}`);
+        return parts.join('');
+    }
+
+    normalizePhoneForSave(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        if (!digits) return '';
+        const normalized = digits[0] === '8' ? `7${digits.slice(1)}` : digits;
+        return normalized.length === 11 && normalized[0] === '7'
+            ? `+${normalized}`
+            : value;
+    }
+
+    isValidPhone(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        return digits.length === 11 && digits[0] === '7';
+    }
+
+    handleBudgetInput(event) {
+        const input = event.target;
+        input.value = this.formatMoneyInput(input.value);
+        this.clearFieldErrors('projectBudget');
+    }
+
+    formatMoneyInput(value) {
+        const raw = String(value || '').replace(/[^\d,.]/g, '').replace(',', '.');
+        if (!raw) return '';
+        const [integerPart, decimalPart = ''] = raw.split('.');
+        const integer = integerPart.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+        const formattedInteger = integer ? Number(integer).toLocaleString('ru-RU') : '';
+        const decimal = decimalPart.replace(/\D/g, '').slice(0, 2);
+        return decimalPart.length || raw.includes('.') ? `${formattedInteger || '0'},${decimal}` : formattedInteger;
+    }
+
+    validateProjectForm() {
+        this.clearFieldErrors('projectBudget', 'projectDeadline');
+        let isValid = true;
+        const budget = this.normalizeMoneyInput(document.getElementById('projectBudget')?.value);
+        const deadline = document.getElementById('projectDeadline')?.value || '';
+
+        if (budget !== null) {
+            const amount = Number(budget);
+            if (!Number.isFinite(amount) || amount < 0) {
+                this.setFieldError('projectBudget', 'Укажите бюджет числом, например 1 000 или 1 000 000');
+                isValid = false;
+            } else if (amount > 999999999999.99) {
+                this.setFieldError('projectBudget', 'Укажите сумму не больше 999 999 999 999,99 ₽');
+                isValid = false;
+            }
+        }
+
+        if (deadline && this.isPastDate(deadline)) {
+            this.setFieldError('projectDeadline', 'Дата проекта не может быть раньше сегодняшнего дня');
+            isValid = false;
+        }
+
+        if (!isValid) this.showMessage('Проверьте бюджет и срок проекта', 'error');
+        return isValid;
+    }
+
+    validateProjectDateField() {
+        this.clearFieldErrors('projectDeadline');
+        const deadline = document.getElementById('projectDeadline')?.value || '';
+        if (deadline && this.isPastDate(deadline)) {
+            this.setFieldError('projectDeadline', 'Дата проекта не может быть раньше сегодняшнего дня');
+            this.showMessage('Выберите сегодняшнюю или будущую дату', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    setProjectDateMin() {
+        const input = document.getElementById('projectDeadline');
+        if (input) input.min = this.getTodayISO();
+    }
+
+    getTodayISO() {
+        const today = new Date();
+        return [
+            today.getFullYear(),
+            String(today.getMonth() + 1).padStart(2, '0'),
+            String(today.getDate()).padStart(2, '0')
+        ].join('-');
+    }
+
+    isPastDate(value) {
+        if (!value) return false;
+        return value < this.getTodayISO();
+    }
+
+    setFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const error = document.getElementById(`${fieldId}Error`);
+        field?.classList.add('field-invalid');
+        if (error) error.textContent = message;
+    }
+
+    clearFieldErrors(...fieldIds) {
+        fieldIds.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const error = document.getElementById(`${fieldId}Error`);
+            field?.classList.remove('field-invalid');
+            if (error) error.textContent = '';
+        });
+    }
+
+    openNotificationsPanel() {
+        const panel = document.querySelector('.notifications-panel');
+        panel?.classList.add('is-open');
+        panel?.classList.remove('is-hidden');
+        this.notificationsPanelCollapsed = false;
+        this.updateNotificationsPanelState();
+    }
+
+    closeNotificationsPanel() {
+        const panel = document.querySelector('.notifications-panel');
+        panel?.classList.add('is-hidden');
+        panel?.classList.remove('is-open');
+    }
+
+    toggleNotificationsPanel() {
+        const panel = document.querySelector('.notifications-panel');
+        if (panel?.classList.contains('is-hidden')) {
+            this.openNotificationsPanel();
+            return;
+        }
+        this.notificationsPanelCollapsed = !this.notificationsPanelCollapsed;
+        this.updateNotificationsPanelState();
+    }
+
+    updateNotificationsPanelState() {
+        const panel = document.querySelector('.notifications-panel');
+        const toggle = document.getElementById('toggleNotificationsPanelBtn');
+        panel?.classList.toggle('is-collapsed', this.notificationsPanelCollapsed);
+        if (toggle) toggle.textContent = this.notificationsPanelCollapsed ? 'Развернуть' : 'Свернуть';
     }
 
     initModals() {
@@ -1228,10 +1468,13 @@ class Dashboard {
     showMessage(text, type) {
         const message = document.getElementById('message');
         if (!message) return;
+        window.clearTimeout(this.messageTimer);
         message.textContent = text;
-        message.className = `message ${type}`;
+        message.className = `message ${type} show`;
+        message.setAttribute('role', type === 'error' ? 'alert' : 'status');
         message.style.display = 'block';
-        setTimeout(() => {
+        this.messageTimer = setTimeout(() => {
+            message.classList.remove('show');
             message.style.display = 'none';
         }, 4000);
     }
@@ -1271,13 +1514,56 @@ class Dashboard {
     getFilteredProjects() {
         return this.projects.filter(project => {
             const matchesStatus = this.projectStatusFilter === 'all' || project.status === this.projectStatusFilter;
+            const projectTags = this.getProjectTagsForProject(project).map(tag => tag.toLowerCase());
+            const matchesTag = this.projectTagFilter === 'all' || projectTags.includes(this.projectTagFilter.toLowerCase());
             const showArchived = this.showArchiveProjects || project.status !== 'completed';
             const filesHaystack = Array.isArray(project.files) ? project.files.map(file => file.file_name).join(' ') : '';
-            const haystack = `${project.title || ''} ${project.description || ''} ${project.user_email || ''} ${project.messages_text || ''} ${filesHaystack}`.toLowerCase();
+            const haystack = `${project.title || ''} ${project.description || ''} ${project.user_email || ''} ${project.messages_text || ''} ${filesHaystack} ${projectTags.join(' ')}`.toLowerCase();
             const matchesProjectSearch = !this.projectSearchQuery || haystack.includes(this.projectSearchQuery);
             const matchesGlobalSearch = !this.globalSearchQuery || haystack.includes(this.globalSearchQuery);
-            return matchesStatus && showArchived && matchesProjectSearch && matchesGlobalSearch;
+            return matchesStatus && matchesTag && showArchived && matchesProjectSearch && matchesGlobalSearch;
         });
+    }
+
+    renderProjectTags() {
+        const toolbar = document.getElementById('projectTagsToolbar');
+        const container = document.getElementById('projectTags');
+        if (!toolbar || !container) return;
+
+        const tags = this.getProjectTags();
+        toolbar.hidden = tags.length === 0;
+        container.innerHTML = tags.map(tag => `
+            <button type="button" class="project-tag ${this.projectTagFilter === tag ? 'active' : ''}" data-project-tag="${this.escapeHtml(tag)}">
+                ${this.escapeHtml(tag)}
+            </button>
+        `).join('');
+
+        container.querySelectorAll('[data-project-tag]').forEach(button => {
+            button.addEventListener('click', () => {
+                this.projectTagFilter = button.dataset.projectTag;
+                this.displayProjects();
+            });
+        });
+
+        const reset = document.getElementById('resetProjectTagFilter');
+        if (reset) reset.hidden = this.projectTagFilter === 'all';
+    }
+
+    getProjectTags() {
+        const tags = new Set();
+        this.projects.forEach(project => {
+            this.getProjectTagsForProject(project).forEach(tag => tags.add(tag));
+        });
+        return [...tags].sort((a, b) => a.localeCompare(b, 'ru'));
+    }
+
+    getProjectTagsForProject(project) {
+        const tags = new Set();
+        const brief = project.brief && typeof project.brief === 'object' ? project.brief : {};
+        const typeSource = [brief.type, project.type].filter(Boolean).join(' ');
+        typeSource.split(/[,\n;/|]+/).map(tag => tag.trim()).filter(Boolean).forEach(tag => tags.add(tag));
+        if (project.status) tags.add(this.getStatusText(project.status));
+        return [...tags].slice(0, 5);
     }
 
     formatDateTime(value) {
@@ -1291,11 +1577,14 @@ class Dashboard {
     }
 
     normalizeMoneyInput(value) {
-        const normalized = String(value || '')
+        const normalized = String(value || '').trim()
             .replace(/\s/g, '')
             .replace(',', '.')
             .replace(/[^\d.]/g, '');
-        return normalized || null;
+        if (!normalized) return null;
+        const [integerPart, decimalPart = ''] = normalized.split('.');
+        const amount = `${integerPart || '0'}${decimalPart ? `.${decimalPart.slice(0, 2)}` : ''}`;
+        return Number.isFinite(Number(amount)) ? amount : null;
     }
 
     formatBytes(value) {
@@ -1338,6 +1627,8 @@ class Dashboard {
             'Дата регистрации:': 'Registration date:',
             'Уведомления': 'Notifications',
             'Прочитано': 'Mark read',
+            'Свернуть': 'Collapse',
+            'Развернуть': 'Expand',
             'Активные проекты': 'Active projects',
             'в работе и новых': 'new and in progress',
             'непрочитанных': 'unread',
@@ -1373,6 +1664,7 @@ class Dashboard {
             'Завершен': 'Completed',
             'Отклонен': 'Rejected',
             'Показать архив': 'Show archive',
+            'Сбросить тег': 'Reset tag',
             'Создать новый проект': 'Create new project',
             'Название проекта': 'Project title',
             'Описание': 'Description',
@@ -1416,6 +1708,7 @@ class Dashboard {
             'Создайте проект, чтобы отслеживать следующий шаг, статус и коммуникации.': 'Create a project to track the next step, status, and communication.',
             'Ничего не найдено': 'Nothing found',
             'Попробуйте изменить поисковый запрос или статус.': 'Try changing the search query or status.',
+            'Попробуйте изменить поиск, статус или выбранный тег.': 'Try changing search, status, or selected tag.',
             'Описание не указано': 'No description',
             'Открыть чат': 'Open chat',
             'Чат': 'Chat',
