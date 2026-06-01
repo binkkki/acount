@@ -16,7 +16,10 @@ function hasPlaceholderSmtpConfig() {
         value.includes('smtp.example.com') ||
         value.includes('example.com') ||
         value.includes('your_email') ||
-        value.includes('replace_with')
+        value.includes('replace_with') ||
+        value.includes('твоя') ||
+        value.includes('реальная_почта') ||
+        value.includes('пароль_приложения')
     );
 }
 
