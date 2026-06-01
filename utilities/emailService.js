@@ -1,7 +1,23 @@
 const nodemailer = require('nodemailer');
 
 function hasSmtpConfig() {
-    return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
+    return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD && !hasPlaceholderSmtpConfig());
+}
+
+function hasPlaceholderSmtpConfig() {
+    const values = [
+        process.env.SMTP_HOST,
+        process.env.SMTP_USER,
+        process.env.SMTP_PASSWORD,
+        process.env.EMAIL_FROM
+    ].filter(Boolean).map(value => String(value).trim().toLowerCase());
+
+    return values.some(value =>
+        value.includes('smtp.example.com') ||
+        value.includes('example.com') ||
+        value.includes('your_email') ||
+        value.includes('replace_with')
+    );
 }
 
 function createTransporter() {
@@ -41,7 +57,7 @@ async function sendVerificationCode({ to, code, purpose, ttlMinutes }) {
     `;
 
     if (!hasSmtpConfig()) {
-        console.warn(`[email-verification] SMTP не настроен. Код для ${to}: ${code}`);
+        console.warn(`[email-verification] SMTP не настроен или заполнен примером. Код для ${to}: ${code}`);
         return { sent: false };
     }
 
