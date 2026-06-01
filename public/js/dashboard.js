@@ -22,7 +22,7 @@ class Dashboard {
         this.language = localStorage.getItem('language') || 'ru';
         this.translationMap = this.buildTranslationMap();
         this.profileInitialState = '';
-        this.notificationsPanelCollapsed = false;
+        this.notificationsPanelCollapsed = true;
         this.init();
     }
 
@@ -946,6 +946,7 @@ class Dashboard {
             button.addEventListener('click', () => this.switchSection(button.dataset.sectionJump));
         });
         this.setProjectDateMin();
+        this.updateNotificationsPanelState();
     }
 
     handleProfileFormInput(event) {
@@ -1296,6 +1297,7 @@ class Dashboard {
                             class="bot-action"
                             data-bot-action="${this.escapeHtml(action.type)}"
                             data-bot-target="${this.escapeHtml(action.target || '')}"
+                            data-bot-section="${this.escapeHtml(action.section || '')}"
                             data-bot-modal="${this.escapeHtml(action.modal || '')}"
                             data-bot-url="${this.escapeHtml(action.url || '')}">
                         ${this.escapeHtml(action.label)}
@@ -1318,10 +1320,13 @@ class Dashboard {
     }
 
     handleBotAction(dataset) {
-        const { botAction, botTarget, botModal, botUrl } = dataset;
+        const { botAction, botTarget, botSection, botModal, botUrl } = dataset;
         if (botAction === 'section' && botTarget) {
             this.switchSection(botTarget);
             this.scrollDashboardIntoView();
+        }
+        if (botAction === 'project' && botTarget) {
+            this.openProjectFromBot(botTarget, botSection || 'projectDetail');
         }
         if (botAction === 'modal' && botModal) {
             this.switchSection(botTarget || 'projects');
@@ -1333,37 +1338,69 @@ class Dashboard {
         }
     }
 
+    openProjectFromBot(projectId, sectionName = 'projectDetail') {
+        const project = this.projects.find(item => Number(item.id) === Number(projectId));
+        if (!project) {
+            this.showMessage('Проект не найден в вашем кабинете', 'error');
+            return;
+        }
+
+        this.currentProjectId = Number(project.id);
+        this.renderProjectSelect();
+        this.switchSection(sectionName);
+        this.scrollDashboardIntoView();
+    }
+
     scrollDashboardIntoView() {
         document.querySelector('.content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     getBotActions(text, reply = '') {
+        const query = String(text || '').toLowerCase();
         const lower = `${text || ''} ${reply || ''}`.toLowerCase();
+        const matchedProject = this.findProjectFromBotText(query);
         const actions = [];
         const has = words => words.some(word => lower.includes(word));
         const add = action => {
-            if (!actions.some(item => item.type === action.type && item.target === action.target && item.modal === action.modal && item.url === action.url)) {
+            if (!actions.some(item => item.type === action.type && item.target === action.target && item.section === action.section && item.modal === action.modal && item.url === action.url)) {
                 actions.push(action);
             }
         };
+
+        if (matchedProject) {
+            add({
+                label: `Открыть: ${matchedProject.title}`,
+                type: 'project',
+                target: String(matchedProject.id),
+                section: 'projectDetail'
+            });
+        }
 
         if (has(['создать проект', 'новый проект', 'оставить заявку', 'заявк'])) {
             add({ label: 'Создать проект', type: 'modal', target: 'projects', modal: 'projectModal' });
         }
 
         if (has(['файл', 'документ', 'загруз', 'скач'])) {
-            add({ label: 'Открыть файлы', type: 'section', target: 'files' });
+            if (matchedProject) {
+                add({ label: 'Файлы проекта', type: 'project', target: String(matchedProject.id), section: 'files' });
+            } else {
+                add({ label: 'Открыть файлы', type: 'section', target: 'files' });
+            }
         }
 
-        if (has(['сообщ', 'чат', 'переписк', 'оператор', 'админ'])) {
-            add({ label: 'Открыть сообщения', type: 'section', target: 'chat' });
+        if (has(['сообщ', 'чат', 'переписк', 'оператор', 'админ', 'менеджер', 'написать'])) {
+            if (matchedProject) {
+                add({ label: 'Чат проекта', type: 'project', target: String(matchedProject.id), section: 'chat' });
+            } else {
+                add({ label: 'Открыть сообщения', type: 'section', target: 'chat' });
+            }
         }
 
-        if (has(['оплат', 'платеж', 'счет', 'транзакц'])) {
+        if (has(['оплат', 'платеж', 'счет', 'транзакц', 'деньги'])) {
             add({ label: 'Открыть платежи', type: 'section', target: 'payments' });
         }
 
-        if (has(['настрой', 'парол', 'язык', 'уведомл'])) {
+        if (has(['настрой', 'парол', 'язык', 'уведомл', 'сменить пароль', 'удалить аккаунт', 'телефон', 'email'])) {
             add({ label: 'Открыть настройки', type: 'section', target: 'settings' });
         }
 
@@ -1375,7 +1412,7 @@ class Dashboard {
             add({ label: 'Сайт PRANA IT', type: 'external', url: 'https://pranait.ru/' });
         }
 
-        if (has(['проект', 'статус', 'этап', 'соглас', 'правк'])) {
+        if (has(['проект', 'статус', 'этап', 'соглас', 'правк', 'дедлайн', 'срок', 'бриф'])) {
             add({ label: 'Открыть проекты', type: 'section', target: 'projects' });
             if (this.currentProjectId) {
                 add({ label: 'Текущий проект', type: 'section', target: 'projectDetail' });
@@ -1385,13 +1422,45 @@ class Dashboard {
         return actions.slice(0, 3);
     }
 
+    findProjectFromBotText(text) {
+        const source = String(text || '').toLowerCase();
+        if (!source || !this.projects.length) return null;
+
+        const idMatch = source.match(/(?:проект(?:\s*№|\s*#)?|#|id\s*)\s*(\d+)/i) || source.match(/\b(\d{1,8})\b/);
+        if (idMatch) {
+            const byId = this.projects.find(project => Number(project.id) === Number(idMatch[1]));
+            if (byId) return byId;
+        }
+
+        const quotedMatch = source.match(/[«"]([^»"]{3,})[»"]/);
+        if (quotedMatch) {
+            const quoted = quotedMatch[1].trim();
+            const byQuote = this.projects.find(project => String(project.title || '').toLowerCase().includes(quoted));
+            if (byQuote) return byQuote;
+        }
+
+        const normalized = source
+            .replace(/где|найди|открой|покажи|перейди|проект|проекта|по|мне|нужен|нужна|нужно|чат|файлы|статус|срок|дедлайн/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (normalized.length < 3) return null;
+
+        return this.projects.find(project => {
+            const title = String(project.title || '').toLowerCase();
+            return title.includes(normalized) || normalized.includes(title);
+        }) || null;
+    }
+
     getBotReply(text) {
         const lower = text.toLowerCase();
         const replies = [
-            { keys: ['проект'], reply: 'Проекты находятся во вкладке "Проекты".' },
-            { keys: ['файл', 'документ'], reply: 'Файлы доступны во вкладке "Файлы проекта".' },
-            { keys: ['сообщение', 'чат'], reply: 'Чат открыт во вкладке "Сообщения".' },
-            { keys: ['контакт', 'оператор', 'связь'], reply: 'Связаться можно по info@pranait.ru или 8 800 500 81 54.' }
+            { keys: ['создать проект', 'новый проект', 'заявк'], reply: 'Новый проект можно создать во вкладке "Проекты". Я добавил кнопку быстрого перехода.' },
+            { keys: ['файл', 'документ', 'загруз', 'скач'], reply: 'Файлы доступны во вкладке "Файлы проекта". Если указан конкретный проект, я добавлю переход сразу к его файлам.' },
+            { keys: ['сообщение', 'чат', 'переписк', 'админ', 'оператор', 'менеджер'], reply: 'Для общения с командой откройте "Сообщения". Если в вопросе есть проект, можно перейти сразу в его чат.' },
+            { keys: ['оплат', 'платеж', 'счет', 'транзакц'], reply: 'История платежей находится во вкладке "Платежи". Там отображаются дата, сумма, статус и номер транзакции.' },
+            { keys: ['парол', 'телефон', 'email', 'язык', 'уведомл', 'удалить аккаунт'], reply: 'Эти действия находятся в настройках профиля. Я добавил кнопку перехода в настройки.' },
+            { keys: ['статус', 'соглас', 'правк', 'этап', 'дедлайн', 'срок', 'бриф', 'проект'], reply: 'Информация по проектам находится во вкладке "Проекты". Если вы указали номер или название проекта, я добавлю прямой переход.' },
+            { keys: ['контакт', 'связь', 'сайт', 'главн'], reply: 'Связаться можно по info@pranait.ru или 8 800 500 81 54. Также можно открыть основной сайт PRANA IT.' }
         ];
         for (const item of replies) {
             if (item.keys.some(key => lower.includes(key))) return item.reply;
