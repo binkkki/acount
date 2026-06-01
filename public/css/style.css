@@ -3226,3 +3226,327 @@ nav h1 a {
         height: 24px;
     }
 }
+
+/* Polished assistant chat */
+#botChatContainer {
+    right: clamp(14px, 2vw, 28px);
+    bottom: clamp(14px, 2vw, 28px);
+    z-index: 4200;
+    font-family: 'PP Neue Machina', Arial, sans-serif;
+}
+
+#botChatButton {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(52, 196, 177, 0.45);
+    background:
+        radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.34), transparent 30%),
+        linear-gradient(135deg, var(--prana-green), #102f34);
+    box-shadow: 0 18px 36px rgba(16, 47, 52, 0.3);
+    transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        border-color 0.22s ease;
+}
+
+#botChatButton:hover {
+    transform: translateY(-3px) scale(1.04);
+    border-color: var(--prana-green-2);
+    box-shadow: 0 24px 44px rgba(29, 152, 136, 0.34);
+}
+
+#botChatButton:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+#botIcon {
+    width: 31px;
+    height: 31px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
+}
+
+#botChatWindow {
+    --bot-width: 430px;
+    --bot-height: 570px;
+    right: 0;
+    bottom: calc(100% + 14px);
+    width: min(var(--bot-width), calc(100vw - 28px));
+    height: min(var(--bot-height), calc(100dvh - 110px));
+    min-width: min(320px, calc(100vw - 28px));
+    min-height: 380px;
+    max-height: none;
+    border: 1px solid rgba(52, 196, 177, 0.36);
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg, rgba(52, 196, 177, 0.09), transparent 40%),
+        var(--surface-elevated, var(--surface));
+    color: var(--text-color);
+    box-shadow:
+        0 28px 70px rgba(10, 31, 35, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    backdrop-filter: blur(18px);
+    transform-origin: 100% 100%;
+}
+
+#botChatWindow.is-resizing {
+    transition: none !important;
+}
+
+.bot-chat-resizing,
+.bot-chat-resizing * {
+    cursor: nwse-resize !important;
+    user-select: none !important;
+}
+
+#botChatHeader {
+    min-height: 62px;
+    padding: 0.9rem 0.9rem 0.9rem 3rem;
+    border-bottom: 1px solid rgba(52, 196, 177, 0.24);
+    background:
+        linear-gradient(135deg, rgba(29, 152, 136, 0.96), rgba(12, 45, 50, 0.96));
+    color: #ffffff;
+}
+
+#botChatHeaderText {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: clamp(1rem, 2vw, 1.22rem);
+    line-height: 1.2;
+}
+
+#botChatHeaderText::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--prana-green-2);
+    box-shadow: 0 0 0 7px rgba(52, 196, 177, 0.16);
+}
+
+#botCloseBtn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-size: 1.35rem;
+    line-height: 1;
+    box-shadow: none;
+}
+
+#botCloseBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+#botMessages {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    padding: 1rem;
+    gap: 0.72rem;
+    border: 0;
+    border-radius: 0;
+    background:
+        radial-gradient(circle at 10% 8%, rgba(52, 196, 177, 0.14), transparent 28%),
+        radial-gradient(circle at 88% 92%, rgba(255, 124, 94, 0.1), transparent 30%),
+        var(--surface-soft);
+}
+
+#botMessages .chat-row {
+    max-width: min(88%, 560px);
+}
+
+#botMessages .chat-bubble {
+    padding: 0.82rem 0.95rem;
+    border: 1px solid rgba(52, 196, 177, 0.13);
+    box-shadow: 0 10px 24px rgba(10, 31, 35, 0.08);
+}
+
+#botMessages .chat-row-user .chat-bubble {
+    background: linear-gradient(135deg, var(--prana-green), var(--prana-green-2));
+}
+
+#botMessages .chat-row-operator .chat-bubble {
+    background: var(--surface-elevated, var(--chat-bot));
+}
+
+#botMessages .chat-text {
+    white-space: pre-line;
+}
+
+#botMessages .chat-row time {
+    margin-top: 0.22rem;
+    padding: 0 0.15rem;
+    color: rgba(94, 113, 123, 0.78);
+    font-size: 0.72rem;
+}
+
+body.dark-theme #botMessages .chat-row time {
+    color: rgba(238, 246, 244, 0.58);
+}
+
+#botChatForm {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    padding: 0.85rem;
+    border-top: 1px solid var(--line);
+    background: var(--surface-elevated, var(--surface));
+}
+
+#botChatForm input {
+    min-width: 0;
+    min-height: 46px;
+    padding: 0.78rem 0.95rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-soft);
+    color: var(--text-color);
+    caret-color: var(--prana-green-2);
+    transition:
+        border-color 0.22s ease,
+        box-shadow 0.22s ease,
+        background-color 0.35s ease,
+        color 0.35s ease;
+}
+
+#botChatForm input::placeholder {
+    color: rgba(94, 113, 123, 0.82);
+}
+
+body.dark-theme #botChatForm input::placeholder {
+    color: rgba(238, 246, 244, 0.5);
+}
+
+#botChatForm input:focus {
+    border-color: var(--prana-green-2);
+    box-shadow: 0 0 0 4px rgba(52, 196, 177, 0.16);
+}
+
+#botChatForm button {
+    min-height: 46px;
+    padding: 0.78rem 1rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--prana-green), var(--prana-green-2));
+    color: #ffffff;
+    font-weight: 800;
+    box-shadow: 0 12px 24px rgba(29, 152, 136, 0.22);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+#botChatForm button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(29, 152, 136, 0.28);
+    filter: saturate(1.05);
+}
+
+#botResizeHandle {
+    position: absolute;
+    top: 11px;
+    left: 11px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 10px;
+    cursor: nwse-resize;
+    background:
+        linear-gradient(135deg, transparent 42%, rgba(255, 255, 255, 0.65) 43%, rgba(255, 255, 255, 0.65) 49%, transparent 50%),
+        linear-gradient(135deg, transparent 58%, rgba(255, 255, 255, 0.36) 59%, rgba(255, 255, 255, 0.36) 64%, transparent 65%),
+        rgba(255, 255, 255, 0.1);
+    z-index: 3;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+#botResizeHandle:hover {
+    border-color: rgba(255, 255, 255, 0.48);
+    background-color: rgba(255, 255, 255, 0.18);
+    transform: scale(1.04);
+}
+
+#botMessages .bot-actions {
+    gap: 0.45rem;
+    margin-top: 0.65rem;
+}
+
+#botMessages .bot-action {
+    min-height: 36px;
+    padding: 0.48rem 0.76rem;
+    border-color: rgba(52, 196, 177, 0.38);
+    background: rgba(52, 196, 177, 0.12);
+    color: var(--text-color);
+    box-shadow: none;
+}
+
+#botMessages .bot-action:hover {
+    background: var(--prana-green);
+    color: #ffffff;
+}
+
+@media (max-width: 768px) {
+    #botChatContainer {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        display: flex;
+        justify-content: flex-end;
+        pointer-events: none;
+    }
+
+    #botChatButton,
+    #botChatWindow {
+        pointer-events: auto;
+    }
+
+    #botChatWindow {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 86px;
+        width: auto !important;
+        height: min(72dvh, 560px) !important;
+        min-width: 0;
+        min-height: 340px;
+        border-radius: 16px;
+    }
+
+    #botChatHeader {
+        min-height: 58px;
+        padding-left: 1rem;
+    }
+
+    #botResizeHandle {
+        display: none;
+    }
+
+    #botMessages .chat-row {
+        max-width: 94%;
+    }
+
+    #botChatForm {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    #botChatForm button {
+        width: 100%;
+    }
+}

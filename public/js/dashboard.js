@@ -1250,6 +1250,8 @@ class Dashboard {
         const botInput = document.getElementById('botInput');
         if (!botButton || !botWindow || !botForm || !botMessages || !botInput) return;
 
+        this.initBotResize(botWindow);
+
         botButton.addEventListener('click', () => {
             botWindow.style.display = 'flex';
             requestAnimationFrame(() => botWindow.classList.add('bot-open'));
@@ -1282,6 +1284,94 @@ class Dashboard {
                 botInput.disabled = false;
                 botInput.focus();
             }
+        });
+    }
+
+    initBotResize(botWindow) {
+        const handle = document.getElementById('botResizeHandle');
+        if (!handle || !botWindow) return;
+
+        const sizeKey = 'pranaBotChatSize';
+        const clampSize = (width, height) => {
+            const maxWidth = Math.min(760, window.innerWidth - 28);
+            const maxHeight = Math.min(780, window.innerHeight - 108);
+            return {
+                width: Math.max(320, Math.min(width, maxWidth)),
+                height: Math.max(380, Math.min(height, maxHeight))
+            };
+        };
+        const applySize = ({ width, height }) => {
+            botWindow.style.setProperty('--bot-width', `${width}px`);
+            botWindow.style.setProperty('--bot-height', `${height}px`);
+        };
+        const getCurrentSize = () => {
+            const rect = botWindow.getBoundingClientRect();
+            return {
+                width: parseFloat(botWindow.style.getPropertyValue('--bot-width')) || rect.width || 430,
+                height: parseFloat(botWindow.style.getPropertyValue('--bot-height')) || rect.height || 570
+            };
+        };
+
+        try {
+            const savedSize = JSON.parse(localStorage.getItem(sizeKey) || 'null');
+            if (savedSize?.width && savedSize?.height) {
+                applySize(clampSize(savedSize.width, savedSize.height));
+            }
+        } catch (error) {
+            try {
+                localStorage.removeItem(sizeKey);
+            } catch (storageError) {
+                console.warn('Bot chat size storage is unavailable:', storageError);
+            }
+        }
+
+        let dragState = null;
+
+        handle.addEventListener('pointerdown', event => {
+            if (window.matchMedia('(max-width: 768px)').matches) return;
+            event.preventDefault();
+            handle.setPointerCapture?.(event.pointerId);
+            const rect = botWindow.getBoundingClientRect();
+            dragState = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                startWidth: rect.width,
+                startHeight: rect.height
+            };
+            botWindow.classList.add('is-resizing');
+            document.body.classList.add('bot-chat-resizing');
+        });
+
+        handle.addEventListener('pointermove', event => {
+            if (!dragState) return;
+            const width = dragState.startWidth - (event.clientX - dragState.startX);
+            const height = dragState.startHeight - (event.clientY - dragState.startY);
+            applySize(clampSize(width, height));
+        });
+
+        const stopResize = event => {
+            if (!dragState) return;
+            if (typeof event?.pointerId === 'number' && event.pointerId !== dragState.pointerId) return;
+            const rect = botWindow.getBoundingClientRect();
+            const size = clampSize(rect.width, rect.height);
+            applySize(size);
+            try {
+                localStorage.setItem(sizeKey, JSON.stringify(size));
+            } catch (error) {
+                console.warn('Bot chat size was not saved:', error);
+            }
+            dragState = null;
+            botWindow.classList.remove('is-resizing');
+            document.body.classList.remove('bot-chat-resizing');
+        };
+
+        handle.addEventListener('pointerup', stopResize);
+        handle.addEventListener('pointercancel', stopResize);
+
+        window.addEventListener('resize', () => {
+            const size = getCurrentSize();
+            applySize(clampSize(size.width, size.height));
         });
     }
 
