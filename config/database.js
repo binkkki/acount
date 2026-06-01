@@ -89,6 +89,18 @@ const initDatabase = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS email_verifications (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) NOT NULL,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                purpose VARCHAR(60) NOT NULL,
+                code_hash VARCHAR(255) NOT NULL,
+                attempts INTEGER DEFAULT 0,
+                expires_at TIMESTAMP NOT NULL,
+                consumed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             -- НОВАЯ ТАБЛИЦА ПРОЕКТОВ
             CREATE TABLE IF NOT EXISTS projects (
                 id SERIAL PRIMARY KEY,
@@ -189,6 +201,7 @@ const initDatabase = async () => {
             CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
             CREATE INDEX IF NOT EXISTS idx_messages_project_id ON messages(project_id);
             CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(is_read);
+            CREATE INDEX IF NOT EXISTS idx_email_verifications_lookup ON email_verifications(email, purpose, user_id, consumed_at, expires_at);
             CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
             CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
             CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);

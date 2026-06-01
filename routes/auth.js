@@ -2,6 +2,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const { EmailVerification, VerificationError } = require('../models/EmailVerification');
+const { sendVerificationCode } = require('../utilities/emailService');
 
 const router = express.Router();
 
@@ -22,21 +24,22 @@ function toClientUser(user) {
 
 router.post('/register', async (req, res) => {
     try {
-        const { password, firstName, lastName, phone, company, acceptedTerms } = req.body;
+        const { password, firstName, lastName, phone, company, acceptedTerms, verificationCode } = req.body;
         const email = req.body.email?.trim().toLowerCase();
 
-        if (!email || !password || !firstName || !lastName) {
-            return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
-        }
-
-        if (acceptedTerms !== true) {
-            return res.status(400).json({ error: 'Необходимо принять условия пользовательского договора' });
-        }
+        const validationError = validateRegistrationInput({ email, password, firstName, lastName, acceptedTerms });
+        if (validationError) return res.status(400).json({ error: validationError });
 
         const existingUser = await User.findByEmail(email);
         if (existingUser) {
             return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
         }
+
+        await EmailVerification.verify({
+            email,
+            purpose: 'register',
+            code: verificationCode
+        });
 
         const user = await User.create({ email, password, firstName, lastName, phone, company, acceptedTerms });
         await notifyAdminsAboutNewUser(user);
@@ -45,8 +48,45 @@ router.post('/register', async (req, res) => {
 
         res.status(201).json({ message: 'Пользователь успешно зарегистрирован', user: toClientUser(user), token });
     } catch (error) {
+        if (error instanceof VerificationError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         console.error('Registration error:', error);
         res.status(500).json({ error: 'Ошибка при регистрации' });
+    }
+});
+
+router.post('/register/send-code', async (req, res) => {
+    try {
+        const { password, firstName, lastName, acceptedTerms } = req.body;
+        const email = req.body.email?.trim().toLowerCase();
+
+        const validationError = validateRegistrationInput({ email, password, firstName, lastName, acceptedTerms });
+        if (validationError) return res.status(400).json({ error: validationError });
+
+        const existingUser = await User.findByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+        }
+
+        const verification = await EmailVerification.create({ email, purpose: 'register' });
+        const delivery = await sendVerificationCode({
+            to: email,
+            code: verification.code,
+            purpose: 'register',
+            ttlMinutes: verification.ttlMinutes
+        });
+
+        res.json({
+            message: delivery.sent
+                ? 'Код подтверждения отправлен на email'
+                : 'Код создан. SMTP не настроен, код выведен в лог сервера',
+            emailSent: delivery.sent,
+            ttlMinutes: verification.ttlMinutes
+        });
+    } catch (error) {
+        console.error('Registration code error:', error);
+        res.status(500).json({ error: 'Не удалось отправить код подтверждения' });
     }
 });
 
@@ -69,6 +109,30 @@ async function notifyAdminsAboutNewUser(user) {
     } catch (error) {
         console.error('Admin new user notification error:', error);
     }
+}
+
+function validateRegistrationInput({ email, password, firstName, lastName, acceptedTerms }) {
+    if (!email || !password || !firstName || !lastName) {
+        return 'Все обязательные поля должны быть заполнены';
+    }
+
+    if (!isValidEmail(email)) {
+        return 'Введите корректный email';
+    }
+
+    if (String(password).length < 6) {
+        return 'Пароль должен содержать минимум 6 символов';
+    }
+
+    if (acceptedTerms !== true) {
+        return 'Необходимо принять условия пользовательского договора';
+    }
+
+    return '';
+}
+
+function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || '').trim());
 }
 
 router.post('/login', async (req, res) => {

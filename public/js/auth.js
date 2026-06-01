@@ -23,6 +23,11 @@ class Auth {
             registerForm.addEventListener('submit', (e) => this.handleRegister(e));
         }
 
+        document.getElementById('resendRegisterCodeBtn')?.addEventListener('click', () => this.sendRegisterCodeFromForm());
+        document.getElementById('registerCode')?.addEventListener('input', event => {
+            event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
+        });
+
         this.initAuthPageTransitions();
 
         document.getElementById('openAgreementBtn')?.addEventListener('click', () => this.showAgreement());
@@ -206,27 +211,20 @@ class Auth {
 
     async handleRegister(e) {
         e.preventDefault();
-        
-        const firstName = document.getElementById('firstName').value;
-        const lastName = document.getElementById('lastName').value;
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        const acceptedTerms = document.getElementById('agreeTerms')?.checked === true;
 
-        if (!acceptedTerms) {
-            this.showMessage('Необходимо принять условия пользовательского договора', 'error');
+        const payload = this.getRegisterPayload();
+        if (!this.validateRegisterPayload(payload)) return;
+
+        const verificationBlock = document.getElementById('registerVerificationBlock');
+        const verificationCode = document.getElementById('registerCode')?.value.trim() || '';
+
+        if (verificationBlock?.hidden) {
+            await this.sendRegisterCodeFromForm();
             return;
         }
 
-        // Валидация паролей
-        if (password !== confirmPassword) {
-            this.showMessage('Пароли не совпадают', 'error');
-            return;
-        }
-
-        if (password.length < 6) {
-            this.showMessage('Пароль должен содержать минимум 6 символов', 'error');
+        if (!/^\d{6}$/.test(verificationCode)) {
+            this.showMessage('Введите 6-значный код подтверждения из письма', 'error');
             return;
         }
 
@@ -236,13 +234,7 @@ class Auth {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    firstName, 
-                    lastName, 
-                    email, 
-                    password,
-                    acceptedTerms
-                })
+                body: JSON.stringify({ ...payload, verificationCode })
             });
 
             const data = await response.json();
@@ -252,6 +244,7 @@ class Auth {
                 
                 // Очистка формы и перенаправление на страницу входа
                 document.getElementById('registerForm').reset();
+                this.resetRegisterVerification();
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 2000);
@@ -261,6 +254,99 @@ class Auth {
         } catch (error) {
             this.showMessage('Ошибка соединения с сервером', 'error');
         }
+    }
+
+    getRegisterPayload() {
+        return {
+            firstName: document.getElementById('firstName')?.value.trim() || '',
+            lastName: document.getElementById('lastName')?.value.trim() || '',
+            email: document.getElementById('email')?.value.trim() || '',
+            password: document.getElementById('password')?.value || '',
+            confirmPassword: document.getElementById('confirmPassword')?.value || '',
+            acceptedTerms: document.getElementById('agreeTerms')?.checked === true
+        };
+    }
+
+    validateRegisterPayload(payload) {
+        if (!payload.firstName || !payload.lastName || !payload.email || !payload.password) {
+            this.showMessage('Заполните все обязательные поля', 'error');
+            return false;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(payload.email)) {
+            this.showMessage('Введите корректный email', 'error');
+            return false;
+        }
+
+        if (!payload.acceptedTerms) {
+            this.showMessage('Необходимо принять условия пользовательского договора', 'error');
+            return false;
+        }
+
+        if (payload.password !== payload.confirmPassword) {
+            this.showMessage('Пароли не совпадают', 'error');
+            return false;
+        }
+
+        if (payload.password.length < 6) {
+            this.showMessage('Пароль должен содержать минимум 6 символов', 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    async sendRegisterCodeFromForm() {
+        const payload = this.getRegisterPayload();
+        if (!this.validateRegisterPayload(payload)) return;
+
+        try {
+            const response = await fetch('/api/auth/register/send-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                this.showMessage(data.error || 'Не удалось отправить код', 'error');
+                return;
+            }
+
+            this.showRegisterVerification(data.message || 'Код подтверждения отправлен на email');
+        } catch (error) {
+            this.showMessage('Ошибка соединения с сервером', 'error');
+        }
+    }
+
+    showRegisterVerification(message) {
+        const verificationBlock = document.getElementById('registerVerificationBlock');
+        const codeInput = document.getElementById('registerCode');
+        const submitButton = document.querySelector('#registerForm .auth-submit');
+
+        if (verificationBlock) verificationBlock.hidden = false;
+        if (codeInput) {
+            codeInput.required = true;
+            codeInput.focus();
+        }
+        if (submitButton) submitButton.textContent = 'Подтвердить регистрацию';
+
+        this.showMessage(message, 'success');
+    }
+
+    resetRegisterVerification() {
+        const verificationBlock = document.getElementById('registerVerificationBlock');
+        const codeInput = document.getElementById('registerCode');
+        const submitButton = document.querySelector('#registerForm .auth-submit');
+
+        if (verificationBlock) verificationBlock.hidden = true;
+        if (codeInput) {
+            codeInput.required = false;
+            codeInput.value = '';
+        }
+        if (submitButton) submitButton.textContent = 'Зарегистрироваться';
     }
 
     async verifyToken() {

@@ -54,6 +54,14 @@
                             <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
                             <label for="agreeTerms">Я принимаю условия <button type="button" class="terms-link" id="openAgreementBtn">пользовательского договора</button></label>
                         </div>
+                        <div class="verification-box" id="registerVerificationBlock" hidden>
+                            <p>Мы отправим код на указанный email. Введите его, чтобы завершить регистрацию.</p>
+                            <div class="form-group">
+                                <label for="registerCode">Код подтверждения</label>
+                                <input type="text" id="registerCode" name="registerCode" placeholder="000000" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+                            </div>
+                            <button type="button" class="verification-link" id="resendRegisterCodeBtn">Отправить код повторно</button>
+                        </div>
                         <button type="submit" class="auth-submit">Зарегистрироваться</button>
                     </form>
                 </div>

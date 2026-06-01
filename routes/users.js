@@ -1,6 +1,8 @@
 const express = require('express');
 const { auth, adminAuth } = require('../middleware/auth');
 const User = require('../models/User');
+const { EmailVerification, VerificationError } = require('../models/EmailVerification');
+const { sendVerificationCode } = require('../utilities/emailService');
 const { pool } = require('../config/database');
 const router = express.Router();
 
@@ -13,45 +15,69 @@ router.get('/profile', auth, async (req, res) => {
     }
 });
 
+router.post('/profile/send-code', auth, async (req, res) => {
+    try {
+        const payload = buildProfilePayload(req.body);
+        const validationError = validateProfilePayload(payload);
+        if (validationError) return res.status(400).json({ error: validationError });
+
+        if (!isProfileDataChanged(req.user, payload)) {
+            return res.json({ message: 'Для этих настроек код подтверждения не требуется', requiresCode: false });
+        }
+
+        const existingUser = await User.findByEmail(payload.email);
+        if (existingUser && Number(existingUser.id) !== Number(req.user.id)) {
+            return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+        }
+
+        const verification = await EmailVerification.create({
+            email: req.user.email,
+            purpose: 'profile_update',
+            userId: req.user.id
+        });
+        const delivery = await sendVerificationCode({
+            to: req.user.email,
+            code: verification.code,
+            purpose: 'profile_update',
+            ttlMinutes: verification.ttlMinutes
+        });
+
+        res.json({
+            message: delivery.sent
+                ? 'Код подтверждения отправлен на текущий email'
+                : 'Код создан. SMTP не настроен, код выведен в лог сервера',
+            emailSent: delivery.sent,
+            requiresCode: true,
+            ttlMinutes: verification.ttlMinutes
+        });
+    } catch (error) {
+        console.error('Profile verification code error:', error);
+        res.status(500).json({ error: 'Не удалось отправить код подтверждения' });
+    }
+});
+
 // Обновление профиля
 router.put('/profile', auth, async (req, res) => {
     try {
-        const {
-            firstName,
-            lastName,
-            email,
-            phone,
-            company,
-            notifyEmail,
-            notifyMessages,
-            notifyStatus,
-            notifyNotes
-        } = req.body;
-        if (!firstName || !lastName || !email) {
-            return res.status(400).json({ error: 'Имя, фамилия и email обязательны' });
+        const payload = buildProfilePayload(req.body);
+        const validationError = validateProfilePayload(payload);
+        if (validationError) return res.status(400).json({ error: validationError });
+
+        if (isProfileDataChanged(req.user, payload)) {
+            await EmailVerification.verify({
+                email: req.user.email,
+                purpose: 'profile_update',
+                code: req.body.verificationCode,
+                userId: req.user.id
+            });
         }
 
-        if (!isValidEmail(email)) {
-            return res.status(400).json({ error: 'Введите корректный email' });
-        }
-
-        if (phone && !isValidPhone(phone)) {
-            return res.status(400).json({ error: 'Введите телефон в формате +7XXXXXXXXXX' });
-        }
-
-        const updatedUser = await User.update(req.user.id, {
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-            email: email.trim().toLowerCase(),
-            phone: normalizePhone(phone),
-            company: company?.trim() || null,
-            notify_email: notifyEmail === true,
-            notify_messages: notifyMessages !== false,
-            notify_status: notifyStatus !== false,
-            notify_notes: notifyNotes !== false
-        });
+        const updatedUser = await User.update(req.user.id, payload);
         res.json({ message: 'Профиль обновлен', user: updatedUser });
     } catch (error) {
+        if (error instanceof VerificationError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         if (error.code === '23505') {
             return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
         }
@@ -154,6 +180,49 @@ router.delete('/:id', adminAuth, async (req, res) => {
 
 function isValidEmail(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || '').trim());
+}
+
+function buildProfilePayload(body) {
+    return {
+        first_name: body.firstName?.trim() || '',
+        last_name: body.lastName?.trim() || '',
+        email: body.email?.trim().toLowerCase() || '',
+        phone: normalizePhone(body.phone),
+        company: body.company?.trim() || null,
+        notify_email: body.notifyEmail === true,
+        notify_messages: body.notifyMessages !== false,
+        notify_status: body.notifyStatus !== false,
+        notify_notes: body.notifyNotes !== false
+    };
+}
+
+function validateProfilePayload(payload) {
+    if (!payload.first_name || !payload.last_name || !payload.email) {
+        return 'Имя, фамилия и email обязательны';
+    }
+
+    if (!isValidEmail(payload.email)) {
+        return 'Введите корректный email';
+    }
+
+    if (payload.phone && !isValidPhone(payload.phone)) {
+        return 'Введите телефон в формате +7XXXXXXXXXX';
+    }
+
+    return '';
+}
+
+function isProfileDataChanged(currentUser, nextData) {
+    const current = {
+        first_name: currentUser.first_name || '',
+        last_name: currentUser.last_name || '',
+        email: String(currentUser.email || '').trim().toLowerCase(),
+        phone: normalizePhone(currentUser.phone) || null,
+        company: currentUser.company || null
+    };
+
+    return ['first_name', 'last_name', 'email', 'phone', 'company']
+        .some(key => String(current[key] || '') !== String(nextData[key] || ''));
 }
 
 function normalizePhone(value) {

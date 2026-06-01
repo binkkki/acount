@@ -555,6 +555,40 @@ a:hover {
     line-height: 1.45;
 }
 
+.verification-box {
+    margin: 12px 0 16px;
+    padding: 14px;
+    border: 1px solid rgba(53, 199, 179, 0.34);
+    border-radius: 8px;
+    background: rgba(53, 199, 179, 0.1);
+}
+
+.verification-box[hidden] {
+    display: none;
+}
+
+.verification-box p {
+    margin: 0 0 12px;
+    color: #2c4541;
+    line-height: 1.45;
+}
+
+.verification-link {
+    width: auto;
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    color: var(--green);
+    background: transparent;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.verification-link:hover {
+    color: var(--blue);
+}
+
 .terms-link {
     width: auto;
     padding: 0;

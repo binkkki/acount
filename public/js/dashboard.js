@@ -22,6 +22,8 @@ class Dashboard {
         this.language = localStorage.getItem('language') || 'ru';
         this.translationMap = this.buildTranslationMap();
         this.profileInitialState = '';
+        this.profileInitialDataState = '';
+        this.profileVerificationPending = false;
         this.notificationsPanelCollapsed = true;
         this.init();
     }
@@ -92,6 +94,9 @@ class Dashboard {
         this.setChecked('notifyStatus', user.notify_status !== false);
         this.setChecked('notifyNotes', user.notify_notes !== false);
         this.profileInitialState = this.getProfileFormState();
+        this.profileInitialDataState = this.getProfileDataState();
+        this.profileVerificationPending = false;
+        this.hideProfileVerification();
         this.clearFieldErrors('updateEmail', 'updatePhone');
         this.updateProfileSaveState();
 
@@ -107,17 +112,23 @@ class Dashboard {
         event.preventDefault();
         if (!this.validateProfileForm()) return;
 
-        const payload = {
-            firstName: document.getElementById('updateFirstName')?.value.trim(),
-            lastName: document.getElementById('updateLastName')?.value.trim(),
-            email: document.getElementById('updateEmail')?.value.trim(),
-            phone: this.normalizePhoneForSave(document.getElementById('updatePhone')?.value.trim()),
-            company: document.getElementById('updateCompany')?.value.trim(),
-            notifyEmail: document.getElementById('notifyEmail')?.checked === true,
-            notifyMessages: document.getElementById('notifyMessages')?.checked !== false,
-            notifyStatus: document.getElementById('notifyStatus')?.checked !== false,
-            notifyNotes: document.getElementById('notifyNotes')?.checked !== false
-        };
+        const payload = this.getProfilePayload();
+        const profileDataChanged = this.isProfileDataChanged();
+
+        if (profileDataChanged && !this.profileVerificationPending) {
+            await this.sendProfileVerificationCode(payload);
+            return;
+        }
+
+        if (profileDataChanged) {
+            const verificationCode = document.getElementById('profileVerificationCode')?.value.trim() || '';
+            if (!/^\d{6}$/.test(verificationCode)) {
+                this.setFieldError('profileVerificationCode', 'Введите 6-значный код из письма');
+                this.showMessage('Введите код подтверждения', 'error');
+                return;
+            }
+            payload.verificationCode = verificationCode;
+        }
 
         try {
             await this.request('/api/users/profile', {
@@ -126,6 +137,7 @@ class Dashboard {
                 body: JSON.stringify(payload)
             });
             await this.loadUserData();
+            this.hideProfileVerification();
             this.showMessage('Настройки сохранены', 'success');
         } catch (err) {
             this.showMessage(err.message, 'error');
@@ -885,6 +897,7 @@ class Dashboard {
         document.getElementById('updateProfileForm')?.addEventListener('submit', event => this.updateProfile(event));
         document.getElementById('updateProfileForm')?.addEventListener('input', event => this.handleProfileFormInput(event));
         document.getElementById('updateProfileForm')?.addEventListener('change', () => this.updateProfileSaveState());
+        document.getElementById('resendProfileCodeBtn')?.addEventListener('click', () => this.sendProfileVerificationCode(this.getProfilePayload()));
         document.getElementById('changePasswordForm')?.addEventListener('submit', event => this.changePassword(event));
         document.getElementById('openDeleteAccountModal')?.addEventListener('click', () => this.showModal('deleteAccountModal'));
         document.getElementById('deleteAccountForm')?.addEventListener('submit', event => this.deleteAccount(event));
@@ -953,9 +966,28 @@ class Dashboard {
         if (event.target?.id === 'updatePhone') {
             event.target.value = this.formatPhoneInput(event.target.value);
         }
+        if (event.target?.id === 'profileVerificationCode') {
+            event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
+            this.clearFieldErrors('profileVerificationCode');
+        }
         if (event.target?.id === 'updateEmail') this.clearFieldErrors('updateEmail');
         if (event.target?.id === 'updatePhone') this.clearFieldErrors('updatePhone');
+        if (!this.isProfileDataChanged()) this.hideProfileVerification();
         this.updateProfileSaveState();
+    }
+
+    getProfilePayload() {
+        return {
+            firstName: document.getElementById('updateFirstName')?.value.trim(),
+            lastName: document.getElementById('updateLastName')?.value.trim(),
+            email: document.getElementById('updateEmail')?.value.trim(),
+            phone: this.normalizePhoneForSave(document.getElementById('updatePhone')?.value.trim()),
+            company: document.getElementById('updateCompany')?.value.trim(),
+            notifyEmail: document.getElementById('notifyEmail')?.checked === true,
+            notifyMessages: document.getElementById('notifyMessages')?.checked !== false,
+            notifyStatus: document.getElementById('notifyStatus')?.checked !== false,
+            notifyNotes: document.getElementById('notifyNotes')?.checked !== false
+        };
     }
 
     getProfileFormState() {
@@ -964,6 +996,72 @@ class Dashboard {
         const checks = ['notifyEmail', 'notifyMessages', 'notifyStatus', 'notifyNotes']
             .map(id => document.getElementById(id)?.checked === true ? '1' : '0');
         return JSON.stringify([...values, ...checks]);
+    }
+
+    getProfileDataState() {
+        const fields = ['updateFirstName', 'updateLastName', 'updateEmail', 'updatePhone', 'updateCompany'];
+        return JSON.stringify(fields.map(id => document.getElementById(id)?.value.trim() || ''));
+    }
+
+    isProfileDataChanged() {
+        return this.getProfileDataState() !== this.profileInitialDataState;
+    }
+
+    async sendProfileVerificationCode(payload = this.getProfilePayload()) {
+        if (!this.validateProfileForm()) return;
+        if (!this.isProfileDataChanged()) {
+            this.hideProfileVerification();
+            this.showMessage('Код не нужен: личные данные не изменены', 'success');
+            return;
+        }
+
+        try {
+            const data = await this.request('/api/users/profile/send-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (data.requiresCode === false) {
+                this.hideProfileVerification();
+                this.showMessage(data.message || 'Код подтверждения не требуется', 'success');
+                return;
+            }
+            this.showProfileVerification();
+            this.showMessage(data.message || 'Код подтверждения отправлен на email', 'success');
+        } catch (err) {
+            this.showMessage(err.message, 'error');
+        }
+    }
+
+    showProfileVerification() {
+        const block = document.getElementById('profileVerificationBlock');
+        const input = document.getElementById('profileVerificationCode');
+        const button = document.getElementById('profileSaveBtn');
+
+        this.profileVerificationPending = true;
+        if (block) block.hidden = false;
+        if (input) {
+            input.required = true;
+            input.focus();
+        }
+        if (button) button.textContent = 'Подтвердить и сохранить';
+        this.applyLanguage();
+    }
+
+    hideProfileVerification() {
+        const block = document.getElementById('profileVerificationBlock');
+        const input = document.getElementById('profileVerificationCode');
+        const button = document.getElementById('profileSaveBtn');
+
+        this.profileVerificationPending = false;
+        if (block) block.hidden = true;
+        if (input) {
+            input.required = false;
+            input.value = '';
+        }
+        this.clearFieldErrors('profileVerificationCode');
+        if (button) button.textContent = 'Сохранить изменения';
+        this.applyLanguage();
     }
 
     updateProfileSaveState() {
@@ -1788,6 +1886,11 @@ class Dashboard {
             'Язык': 'Language',
             'Русский': 'Russian',
             'Сохранить изменения': 'Save changes',
+            'Подтвердить и сохранить': 'Confirm and save',
+            'Подтверждение изменений': 'Confirm changes',
+            'Код подтверждения отправляется на текущий email аккаунта. Введите его, чтобы сохранить измененные данные профиля.': 'A verification code is sent to the current account email. Enter it to save changed profile data.',
+            'Код из письма': 'Email code',
+            'Отправить код повторно': 'Send code again',
             'Смена пароля': 'Change password',
             'Текущий пароль': 'Current password',
             'Новый пароль': 'New password',
