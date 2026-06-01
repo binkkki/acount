@@ -49,7 +49,10 @@
                 <section id="profileSection" class="section active">
                     <div class="section-header">
                         <h2>Мой профиль</h2>
-                        <button type="button" class="btn-secondary" id="openNotificationsPanelBtn">Уведомления</button>
+                        <button type="button" class="btn-secondary notification-toggle" id="openNotificationsPanelBtn" aria-expanded="true">
+                            <span>Уведомления</span>
+                            <span class="notification-toggle-arrow" aria-hidden="true"></span>
+                        </button>
                     </div>
 
                     <div class="profile-layout">
@@ -68,8 +71,6 @@
                                 <h3>Уведомления</h3>
                                 <div class="panel-actions">
                                     <button type="button" class="btn-small" id="markProfileNotificationsReadBtn">Прочитано</button>
-                                    <button type="button" class="btn-small btn-ghost" id="toggleNotificationsPanelBtn">Свернуть</button>
-                                    <button type="button" class="btn-small btn-ghost notification-close" id="closeNotificationsPanelBtn" aria-label="Закрыть уведомления">×</button>
                                 </div>
                             </div>
                             <div class="notifications-body" id="notificationsBody">

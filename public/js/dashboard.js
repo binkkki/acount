@@ -899,21 +899,7 @@ class Dashboard {
         document.getElementById('markProfileNotificationsReadBtn')?.addEventListener('click', () => this.markAllNotificationsRead());
         document.getElementById('openNotificationsPanelBtn')?.addEventListener('click', event => {
             event.stopPropagation();
-            this.openNotificationsPanel();
-        });
-        document.getElementById('toggleNotificationsPanelBtn')?.addEventListener('click', event => {
-            event.stopPropagation();
             this.toggleNotificationsPanel();
-        });
-        document.getElementById('closeNotificationsPanelBtn')?.addEventListener('click', event => {
-            event.stopPropagation();
-            this.closeNotificationsPanel();
-        });
-        document.querySelector('.notifications-panel')?.addEventListener('click', event => event.stopPropagation());
-        document.addEventListener('click', event => {
-            if (!event.target.closest?.('.notifications-panel, #openNotificationsPanelBtn, #notificationsWidget')) {
-                this.closeNotificationsPanel();
-            }
         });
         document.getElementById('notificationsWidget')?.addEventListener('click', () => this.openNotificationsPanel());
         document.getElementById('resetProjectTagFilter')?.addEventListener('click', () => {
@@ -1138,26 +1124,21 @@ class Dashboard {
     }
 
     closeNotificationsPanel() {
-        const panel = document.querySelector('.notifications-panel');
-        panel?.classList.add('is-hidden');
-        panel?.classList.remove('is-open');
+        this.notificationsPanelCollapsed = true;
+        this.updateNotificationsPanelState();
     }
 
     toggleNotificationsPanel() {
-        const panel = document.querySelector('.notifications-panel');
-        if (panel?.classList.contains('is-hidden')) {
-            this.openNotificationsPanel();
-            return;
-        }
         this.notificationsPanelCollapsed = !this.notificationsPanelCollapsed;
         this.updateNotificationsPanelState();
     }
 
     updateNotificationsPanelState() {
         const panel = document.querySelector('.notifications-panel');
-        const toggle = document.getElementById('toggleNotificationsPanelBtn');
+        const toggle = document.getElementById('openNotificationsPanelBtn');
         panel?.classList.toggle('is-collapsed', this.notificationsPanelCollapsed);
-        if (toggle) toggle.textContent = this.notificationsPanelCollapsed ? 'Развернуть' : 'Свернуть';
+        toggle?.classList.toggle('is-collapsed', this.notificationsPanelCollapsed);
+        toggle?.setAttribute('aria-expanded', String(!this.notificationsPanelCollapsed));
     }
 
     initModals() {
